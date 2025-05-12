@@ -228,18 +228,15 @@
                     donorChart.targetValue = data.average_n_new_donors_last_30_days;
                     donorChart.update('none'); // Update without animation for smoother transitions
 
-                    // Update the yearly sum display
+                    // Update the yearly sum display with space as thousand separator
                     document.getElementById('yearlySum').textContent = 
-                        data.yearly_sum_new_donors.toLocaleString() + ' kr';
+                        data.yearly_sum_new_donors.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ' ') + ' kr';
                 })
                 .catch(error => console.error('Error:', error));
         }
         
         // Initial chart load
         updateChart();
-        
-        // Set up auto-refresh every 30 seconds
-        setInterval(updateChart, 30000);
     </script>
 </body>
 </html>

@@ -103,12 +103,14 @@
         const targetLinePlugin = {
             id: 'targetLine',
             afterDraw: (chart) => {
+                if (!chart.targetValue && chart.targetValue !== 0) return; // Skip if no target value
+                
                 const {ctx, chartArea, scales} = chart;
                 const xScale = scales.x;
                 const yScale = scales.y;
                 
-                // Get the pixel position for x=10
-                const targetX = xScale.getPixelForValue(10);
+                // Get the pixel position for the average value
+                const targetX = xScale.getPixelForValue(chart.targetValue);
                 
                 // Only draw if targetX is within the chart area
                 if (targetX >= chartArea.left && targetX <= chartArea.right) {
@@ -123,13 +125,16 @@
                     ctx.stroke();
                     
                     // Draw the label
+                    const labelText = 'Snitt 30d: ' + chart.targetValue;
+                    const labelWidth = ctx.measureText(labelText).width + 20; // Add padding
+                    
                     ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
-                    ctx.fillRect(targetX + 5, chartArea.top, 60, 20);
+                    ctx.fillRect(targetX + 5, chartArea.top, labelWidth, 20);
                     ctx.fillStyle = 'white';
                     ctx.font = 'bold 12px Arial';
                     ctx.textAlign = 'left';
                     ctx.textBaseline = 'middle';
-                    ctx.fillText('M\u00e5l: 10', targetX + 10, chartArea.top + 10);
+                    ctx.fillText(labelText, targetX + 10, chartArea.top + 10);
                     ctx.restore();
                 }
             }
@@ -161,7 +166,7 @@
                                 scales: {
                                     x: {
                                         beginAtZero: true,
-                                        max: Math.max(20, data.n_new_donors),
+                                        max: Math.max(60, data.n_new_donors),
                                         grid: {
                                             color: '#eee'
                                         },
@@ -219,7 +224,9 @@
                         donorChart.update();
                     }
                     
-                    // The target line is drawn by the plugin automatically
+                    // Set the target value for the chart (30-day average)
+                    donorChart.targetValue = data.average_n_new_donors_last_30_days;
+                    donorChart.update('none'); // Update without animation for smoother transitions
 
                     // Update the yearly sum display
                     document.getElementById('yearlySum').textContent = 

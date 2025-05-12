@@ -56,10 +56,20 @@ def report():
 def get_today():
     today = datetime.now().date()
     record = DonorStats.query.filter_by(date=today).first()
+    
+    # Calculate the average of n_new_donors for the last 30 days
+    thirty_days_ago = today - timedelta(days=30)
+    last_30_days_records = DonorStats.query.filter(DonorStats.date >= thirty_days_ago).all()
+    
+    average_n_new_donors_last_30_days = 0
+    if last_30_days_records:
+        average_n_new_donors_last_30_days = round(sum(r.n_new_donors for r in last_30_days_records) / len(last_30_days_records))
+    
     if record:
         return jsonify({
             'n_new_donors': record.n_new_donors,
-            'yearly_sum_new_donors': record.yearly_sum_new_donors
+            'yearly_sum_new_donors': record.yearly_sum_new_donors,
+            'average_n_new_donors_last_30_days': average_n_new_donors_last_30_days
         })
     return jsonify({'error': 'No data for today'}), 404
 

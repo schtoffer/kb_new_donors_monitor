@@ -96,86 +96,143 @@
         // Register the datalabels plugin
         Chart.register(ChartDataLabels);
         
-        // Get today's data from the Flask endpoint
-        fetch('/api/today')
-            .then(response => response.json())
-            .then(data => {
-                // Create the bar chart
-                const ctx = document.getElementById('donorChart').getContext('2d');
-                new Chart(ctx, {
-                    type: 'bar',
-                    data: {
-                        labels: ['New Donors'],
-                        datasets: [{
-                            data: [data.n_new_donors],
-                            backgroundColor: '#FC4C02',
-                            borderRadius: 6,
-                            barThickness: 40
-                        }]
-                    },
-                    options: {
-                        responsive: true,
-                        maintainAspectRatio: false,
-                        scales: {
-                            x: {
-                                beginAtZero: true,
-                                max: Math.max(20, data.n_new_donors),
-                                grid: {
-                                    color: '#eee'
+        // Global chart variable so we can update it
+        let donorChart;
+        
+        // Create a custom plugin to draw a target line
+        const targetLinePlugin = {
+            id: 'targetLine',
+            afterDraw: (chart) => {
+                const {ctx, chartArea, scales} = chart;
+                const xScale = scales.x;
+                const yScale = scales.y;
+                
+                // Get the pixel position for x=10
+                const targetX = xScale.getPixelForValue(10);
+                
+                // Only draw if targetX is within the chart area
+                if (targetX >= chartArea.left && targetX <= chartArea.right) {
+                    // Draw the vertical line
+                    ctx.save();
+                    ctx.beginPath();
+                    ctx.moveTo(targetX, chartArea.top);
+                    ctx.lineTo(targetX, chartArea.bottom);
+                    ctx.lineWidth = 2;
+                    ctx.strokeStyle = 'black';
+                    ctx.setLineDash([5, 5]);
+                    ctx.stroke();
+                    
+                    // Draw the label
+                    ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+                    ctx.fillRect(targetX + 5, chartArea.top, 60, 20);
+                    ctx.fillStyle = 'white';
+                    ctx.font = 'bold 12px Arial';
+                    ctx.textAlign = 'left';
+                    ctx.textBaseline = 'middle';
+                    ctx.fillText('M\u00e5l: 10', targetX + 10, chartArea.top + 10);
+                    ctx.restore();
+                }
+            }
+        };
+        
+        // Function to fetch data and update the chart
+        function updateChart() {
+            fetch('/api/today')
+                .then(response => response.json())
+                .then(data => {
+                    if (!donorChart) {
+                        // Create the chart if it doesn't exist
+                        const ctx = document.getElementById('donorChart').getContext('2d');
+                        donorChart = new Chart(ctx, {
+                            plugins: [targetLinePlugin],
+                            type: 'bar',
+                            data: {
+                                labels: ['New Donors'],
+                                datasets: [{
+                                    data: [data.n_new_donors],
+                                    backgroundColor: '#FC4C02',
+                                    borderRadius: 6,
+                                    barThickness: 40
+                                }]
+                            },
+                            options: {
+                                responsive: true,
+                                maintainAspectRatio: false,
+                                scales: {
+                                    x: {
+                                        beginAtZero: true,
+                                        max: Math.max(20, data.n_new_donors),
+                                        grid: {
+                                            color: '#eee'
+                                        },
+                                        ticks: {
+                                            color: '#333',
+                                            font: {
+                                                size: 12
+                                            }
+                                        }
+                                    },
+                                    y: {
+                                        grid: {
+                                            display: false
+                                        },
+                                        ticks: {
+                                            color: '#333',
+                                            font: {
+                                                size: 14,
+                                                weight: 'bold'
+                                            }
+                                        }
+                                    }
                                 },
-                                ticks: {
-                                    color: '#333',
-                                    font: {
-                                        size: 12
+                                plugins: {
+                                    legend: {
+                                        display: false
+                                    },
+                                    tooltip: {
+                                        enabled: false
+                                    },
+                                    datalabels: {
+                                        color: 'white',
+                                        font: {
+                                            weight: 'bold',
+                                            size: 14
+                                        },
+                                        formatter: (value) => value
+                                    }
+                                },
+                                indexAxis: 'y',
+                                layout: {
+                                    padding: {
+                                        left: 20,
+                                        right: 20,
+                                        top: 20,
+                                        bottom: 20
                                     }
                                 }
-                            },
-                            y: {
-                                grid: {
-                                    display: false
-                                },
-                                ticks: {
-                                    color: '#333',
-                                    font: {
-                                        size: 14,
-                                        weight: 'bold'
-                                    }
-                                }
                             }
-                        },
-                        plugins: {
-                            legend: {
-                                display: false
-                            },
-                            tooltip: {
-                                enabled: false
-                            },
-                            datalabels: {
-                                color: 'white',
-                                font: {
-                                    weight: 'bold',
-                                    size: 14
-                                },
-                                formatter: (value) => value
-                            }
-                        },
-                        indexAxis: 'y',
-                        layout: {
-                            padding: {
-                                left: 20,
-                                right: 20,
-                                top: 20,
-                                bottom: 20
-                            }
-                        }
+                        });
+                    } else {
+                        // Update existing chart data
+                        donorChart.data.datasets[0].data = [data.n_new_donors];
+                        donorChart.options.scales.x.max = Math.max(20, data.n_new_donors);
+                        donorChart.update();
                     }
-                });
+                    
+                    // The target line is drawn by the plugin automatically
 
-                // Update the yearly sum display
-                document.getElementById('yearlySum').textContent = 
-                    data.yearly_sum_new_donors.toLocaleString() + ' kr';
-            })
-            .catch(error => console.error('Error:', error));
+                    // Update the yearly sum display
+                    document.getElementById('yearlySum').textContent = 
+                        data.yearly_sum_new_donors.toLocaleString() + ' kr';
+                })
+                .catch(error => console.error('Error:', error));
+        }
+        
+        // Initial chart load
+        updateChart();
+        
+        // Set up auto-refresh every 30 seconds
+        setInterval(updateChart, 30000);
     </script>
 </body>
 </html>

@@ -15,8 +15,8 @@
             --accent-color: #D7CFD2; /* Secondary light gray */
         }
         
-        .chart-container {
-            max-width: 600px;
+        .chart-container, .stats-container {
+            width: 100%;
             margin: 2rem auto;
             padding: 1.5rem;
             background-color: var(--tertiary-color);
@@ -28,11 +28,6 @@
         .stats-container {
             text-align: center;
             margin-top: 2rem;
-            padding: 1.5rem;
-            background-color: var(--tertiary-color);
-            border-radius: 10px;
-            border: 1px solid var(--accent-color);
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
         }
         
         .stat-value {
@@ -152,12 +147,12 @@
                             plugins: [targetLinePlugin],
                             type: 'bar',
                             data: {
-                                labels: ['New Donors'],
+                                labels: [''],
                                 datasets: [{
                                     data: [data.n_new_donors],
                                     backgroundColor: '#FC4C02',
                                     borderRadius: 6,
-                                    barThickness: 40
+                                    barThickness: 60
                                 }]
                             },
                             options: {
@@ -182,11 +177,7 @@
                                             display: false
                                         },
                                         ticks: {
-                                            color: '#333',
-                                            font: {
-                                                size: 14,
-                                                weight: 'bold'
-                                            }
+                                            display: false // Hide y-axis labels
                                         }
                                     }
                                 },

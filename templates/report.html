@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Donor Report</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.0.0"></script>
+    <style>
+        :root {
+            --primary-color: #FC4C02; /* Primary orange */
+            --secondary-color: #000000; /* Black */
+            --tertiary-color: #FFFFFF; /* White */
+            --accent-color: #D7CFD2; /* Secondary light gray */
+        }
+        
+        .chart-container {
+            max-width: 600px;
+            margin: 2rem auto;
+            padding: 1.5rem;
+            background-color: var(--tertiary-color);
+            border-radius: 10px;
+            border: 1px solid var(--accent-color);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+        }
+        
+        .stats-container {
+            text-align: center;
+            margin-top: 2rem;
+            padding: 1.5rem;
+            background-color: var(--tertiary-color);
+            border-radius: 10px;
+            border: 1px solid var(--accent-color);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+        }
+        
+        .stat-value {
+            font-size: 2.8rem;
+            font-weight: bold;
+            color: var(--primary-color);
+            margin-bottom: 0.5rem;
+        }
+        
+        .stat-label {
+            color: var(--secondary-color);
+            font-size: 1.2rem;
+        }
+        
+        body {
+            background-color: var(--accent-color);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--secondary-color);
+        }
+        
+        .container {
+            background-color: var(--tertiary-color);
+            border-radius: 15px;
+            padding: 2.5rem;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            width: 90%;
+            max-width: 800px;
+        }
+        
+        h1 {
+            color: var(--primary-color);
+            margin-bottom: 2.5rem;
+            font-size: 2.5rem;
+            font-weight: bold;
+            text-align: center;
+        }
+        
+        canvas {
+            max-height: 200px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1 class="text-center mb-4">Nye faste givere i dag</h1>
+        
+        <div class="chart-container">
+            <canvas id="donorChart"></canvas>
+        </div>
+
+        <div class="stats-container">
+            <div class="stat-value" id="yearlySum"></div>
+            <div class="stat-label">Årlig verdi på nyrekrutterte givere</div>
+        </div>
+    </div>
+
+    <script>
+        // Register the datalabels plugin
+        Chart.register(ChartDataLabels);
+        
+        // Get today's data from the Flask endpoint
+        fetch('/api/today')
+            .then(response => response.json())
+            .then(data => {
+                // Create the bar chart
+                const ctx = document.getElementById('donorChart').getContext('2d');
+                new Chart(ctx, {
+                    type: 'bar',
+                    data: {
+                        labels: ['New Donors'],
+                        datasets: [{
+                            data: [data.n_new_donors],
+                            backgroundColor: '#FC4C02',
+                            borderRadius: 6,
+                            barThickness: 40
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        scales: {
+                            x: {
+                                beginAtZero: true,
+                                max: Math.max(20, data.n_new_donors),
+                                grid: {
+                                    color: '#eee'
+                                },
+                                ticks: {
+                                    color: '#333',
+                                    font: {
+                                        size: 12
+                                    }
+                                }
+                            },
+                            y: {
+                                grid: {
+                                    display: false
+                                },
+                                ticks: {
+                                    color: '#333',
+                                    font: {
+                                        size: 14,
+                                        weight: 'bold'
+                                    }
+                                }
+                            }
+                        },
+                        plugins: {
+                            legend: {
+                                display: false
+                            },
+                            tooltip: {
+                                enabled: false
+                            },
+                            datalabels: {
+                                color: 'white',
+                                font: {
+                                    weight: 'bold',
+                                    size: 14
+                                },
+                                formatter: (value) => value
+                            }
+                        },
+                        indexAxis: 'y',
+                        layout: {
+                            padding: {
+                                left: 20,
+                                right: 20,
+                                top: 20,
+                                bottom: 20
+                            }
+                        }
+                    }
+                });
+
+                // Update the yearly sum display
+                document.getElementById('yearlySum').textContent = 
+                    data.yearly_sum_new_donors.toLocaleString() + ' kr';
+            })
+            .catch(error => console.error('Error:', error));
+    </script>
+</body>
+</html>

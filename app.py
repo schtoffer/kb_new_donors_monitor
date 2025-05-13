@@ -1,8 +1,10 @@
-from flask import Flask, render_template, jsonify
+from flask import Flask, render_template, jsonify, request
 from flask_sqlalchemy import SQLAlchemy
 from datetime import datetime, timedelta
 import random
 import os
+import secrets
+import hashlib
 
 app = Flask(__name__)
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///donors.db'
@@ -44,6 +46,10 @@ class DonorStats(db.Model):
         db.session.commit()
         return record
 
+# API key for vendor authentication - in production, store this securely
+# Generate a random API key for initial setup
+API_KEY = os.environ.get('VENDOR_API_KEY', 'test_api_key_123')
+
 @app.route('/')
 def index():
     return 'Hello, World!'
@@ -80,6 +86,51 @@ def get_today():
             'average_n_new_donors_last_30_days': average_n_new_donors_last_30_days
         })
     return jsonify({'error': 'No data for today'}), 404
+
+@app.route('/api/donor-stats', methods=['POST'])
+def update_donor_stats():
+    # Authenticate the request
+    auth_header = request.headers.get('Authorization')
+    if not auth_header or not auth_header.startswith('Bearer '):
+        return jsonify({'error': 'Missing or invalid authorization header'}), 401
+    
+    token = auth_header.split(' ')[1]
+    if not secrets.compare_digest(token, API_KEY):
+        return jsonify({'error': 'Invalid API key'}), 401
+    
+    # Validate the request data
+    data = request.get_json()
+    if not data:
+        return jsonify({'error': 'No data provided'}), 400
+    
+    required_fields = ['date', 'n_new_donors', 'yearly_sum_new_donors', 'n_total_new_donors', 'yearly_sum_all_donors']
+    for field in required_fields:
+        if field not in data:
+            return jsonify({'error': f'Missing required field: {field}'}), 400
+    
+    try:
+        # Parse the date
+        if isinstance(data['date'], str):
+            date = datetime.strptime(data['date'], '%Y-%m-%d').date()
+        else:
+            return jsonify({'error': 'Date must be in YYYY-MM-DD format'}), 400
+            
+        # Update or create the record
+        DonorStats.update_or_create(
+            date=date,
+            n_new_donors=int(data['n_new_donors']),
+            yearly_sum_new_donors=float(data['yearly_sum_new_donors']),
+            n_total_new_donors=int(data['n_total_new_donors']),
+            yearly_sum_all_donors=float(data['yearly_sum_all_donors'])
+        )
+        
+        return jsonify({
+            'status': 'success',
+            'message': 'Donor statistics updated successfully'
+        }), 200
+        
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
 @app.route('/populate')
 def populate_db():

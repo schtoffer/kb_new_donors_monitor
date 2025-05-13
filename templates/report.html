@@ -19,10 +19,7 @@
             width: 100%;
             margin: 2rem auto;
             padding: 1.5rem;
-            background-color: var(--tertiary-color);
-            border-radius: 10px;
-            border: 1px solid var(--accent-color);
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+            background-color: transparent;
         }
         
         .stats-container {
@@ -42,22 +39,65 @@
             font-size: 1.2rem;
         }
         
+        /* Heartwarming element styling */
+        .heart-container {
+            text-align: center;
+            margin-bottom: 1rem;
+        }
+        
+        .heart {
+            display: inline-block;
+            position: relative;
+            width: 50px;
+            height: 45px;
+            animation: heartbeat 1.5s ease-in-out infinite;
+        }
+        
+        .heart:before,
+        .heart:after {
+            content: "";
+            position: absolute;
+            left: 25px;
+            top: 0;
+            width: 25px;
+            height: 40px;
+            background: var(--primary-color);
+            border-radius: 50px 50px 0 0;
+            transform: rotate(-45deg);
+            transform-origin: 0 100%;
+        }
+        
+        .heart:after {
+            left: 0;
+            transform: rotate(45deg);
+            transform-origin: 100% 100%;
+        }
+        
+        @keyframes heartbeat {
+            0% { transform: scale(1); }
+            25% { transform: scale(1.1); }
+            50% { transform: scale(1); }
+            75% { transform: scale(1.1); }
+            100% { transform: scale(1); }
+        }
+        
         body {
-            background-color: var(--accent-color);
+            background-color: var(--tertiary-color);
             min-height: 100vh;
-            display: flex;
-            align-items: center;
-            justify-content: center;
+            margin: 0;
+            padding: 0;
             color: var(--secondary-color);
+            overflow: hidden;
         }
         
         .container {
             background-color: var(--tertiary-color);
-            border-radius: 15px;
-            padding: 2.5rem;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-            width: 90%;
-            max-width: 800px;
+            border-radius: 0;
+            padding: 1rem;
+            box-shadow: none;
+            width: 100%;
+            max-width: 100%;
+            margin: 0;
         }
         
         h1 {
@@ -75,6 +115,9 @@
 </head>
 <body>
     <div class="container">
+        <div class="heart-container">
+            <div class="heart"></div>
+        </div>
         <h1 class="text-center mb-4">Nye faste givere i dag</h1>
         
         <div class="chart-container">
@@ -222,6 +265,29 @@
                     // Update the yearly sum display with space as thousand separator
                     document.getElementById('yearlySum').textContent = 
                         data.yearly_sum_new_donors.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ' ') + ' kr';
+                    
+                    // Add a heartwarming message based on the number of new donors
+                    const heartMessage = document.createElement('div');
+                    heartMessage.className = 'text-center mt-3 mb-2';
+                    heartMessage.style.color = '#FC4C02';
+                    heartMessage.style.fontStyle = 'italic';
+                    heartMessage.style.fontSize = '1.1rem';
+                    
+                    if (data.n_new_donors > 0) {
+                        const messages = [
+                            `${data.n_new_donors} nye hjerter som slår for en god sak ❤️`,
+                            `Takk til ${data.n_new_donors} nye givere som sprer varme i dag ❤️`,
+                            `${data.n_new_donors} nye givere som skaper håp og muligheter ❤️`,
+                            `I dag har ${data.n_new_donors} nye mennesker valgt å gjøre en forskjell ❤️`
+                        ];
+                        heartMessage.textContent = messages[Math.floor(Math.random() * messages.length)];
+                    } else {
+                        heartMessage.textContent = 'Hver giver teller og gjør en forskjell ❤️';
+                    }
+                    
+                    // Insert the message before the yearly sum container
+                    const statsContainer = document.querySelector('.stats-container');
+                    statsContainer.insertBefore(heartMessage, document.getElementById('yearlySum'));
                 })
                 .catch(error => console.error('Error:', error));
         }

@@ -62,9 +62,27 @@ def report():
 def service():
     # Get the device's IP address
     import socket
-    hostname = socket.gethostname()
-    ip_address = socket.gethostbyname(hostname)
-    return render_template('service.html', ip_address=ip_address)
+    import subprocess
+    
+    try:
+        # Try to get the IP address using the hostname command
+        ip_address = subprocess.check_output(['hostname', '-I']).decode('utf-8').strip().split()[0]
+    except:
+        try:
+            # Fallback method 1: Try to get IP by creating a socket connection
+            s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+            s.connect(("8.8.8.8", 80))
+            ip_address = s.getsockname()[0]
+            s.close()
+        except:
+            # Fallback method 2: Use hostname
+            hostname = socket.gethostname()
+            ip_address = socket.gethostbyname(hostname)
+    
+    # Format the IP address as a URL
+    url = f"http://{ip_address}:5000"
+    
+    return render_template('service.html', ip_address=url)
 
 @app.route('/api/today')
 def get_today():

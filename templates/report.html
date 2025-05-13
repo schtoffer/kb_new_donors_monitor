@@ -13,6 +13,7 @@
             --secondary-color: #000000; /* Black */
             --tertiary-color: #FFFFFF; /* White */
             --accent-color: #D7CFD2; /* Secondary light gray */
+            --background-color: rgb(236, 230, 233); /* Lighter background color */
         }
         
         /* Hamburger menu styles */
@@ -25,7 +26,7 @@
             padding: 0 10px;
             text-align: right;
             z-index: 1000;
-            background-color: var(--tertiary-color);
+            background-color: var(--background-color);
             display: flex;
             align-items: center;
             justify-content: flex-end;
@@ -143,7 +144,7 @@
         }
         
         body {
-            background-color: var(--tertiary-color);
+            background-color: var(--background-color);
             min-height: 100vh;
             margin: 0;
             padding: 0;
@@ -152,7 +153,7 @@
         }
         
         .container {
-            background-color: var(--tertiary-color);
+            background-color: var(--background-color);
             border-radius: 0;
             padding: 1rem;
             box-shadow: none;
@@ -163,11 +164,15 @@
         }
         
         h1 {
-            color: var(--primary-color);
-            margin-bottom: 2.5rem;
-            font-size: 2.5rem;
-            font-weight: bold;
+            color: rgb(33, 31, 32);
+            font-family: neuzeit-grotesk, sans-serif;
+            font-size: 28.5344px;
+            font-weight: 700;
+            line-height: 42.8016px;
+            margin: 0;
+            padding: 0;
             text-align: center;
+            box-sizing: border-box;
         }
         
         canvas {
@@ -342,9 +347,15 @@
                     // Add a heartwarming message based on the number of new donors
                     const heartMessage = document.createElement('div');
                     heartMessage.className = 'text-center mt-3 mb-2';
-                    heartMessage.style.color = '#FC4C02';
-                    heartMessage.style.fontStyle = 'italic';
-                    heartMessage.style.fontSize = '1.1rem';
+                    heartMessage.style.color = 'rgb(33, 31, 32)';
+                    heartMessage.style.fontFamily = 'neuzeit-grotesk, sans-serif';
+                    heartMessage.style.fontSize = '18.1352px';
+                    heartMessage.style.fontWeight = '400';
+                    heartMessage.style.lineHeight = '27.2028px';
+                    heartMessage.style.margin = '0';
+                    heartMessage.style.padding = '0';
+                    heartMessage.style.boxSizing = 'border-box';
+                    heartMessage.style.textAlign = 'center';
                     
                     if (data.n_new_donors > 0) {
                         const messages = [

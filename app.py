@@ -52,6 +52,14 @@ def index():
 def report():
     return render_template('report.html')
 
+@app.route('/service')
+def service():
+    # Get the device's IP address
+    import socket
+    hostname = socket.gethostname()
+    ip_address = socket.gethostbyname(hostname)
+    return f"<pre style='font-family: monospace; font-size: 24px; margin: 50px;'>{ip_address}</pre>"
+
 @app.route('/api/today')
 def get_today():
     today = datetime.now().date()

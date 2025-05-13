@@ -58,7 +58,7 @@ def service():
     import socket
     hostname = socket.gethostname()
     ip_address = socket.gethostbyname(hostname)
-    return f"<pre style='font-family: monospace; font-size: 24px; margin: 50px;'>{ip_address}</pre>"
+    return render_template('service.html', ip_address=ip_address)
 
 @app.route('/api/today')
 def get_today():

@@ -123,7 +123,6 @@
             font-weight: bold;
             color: var(--primary-color);
             margin: 5px 0;
-            animation: pulse 2s infinite;
         }
         
         .impact-text {
@@ -151,7 +150,7 @@
             height: 20px;
             margin: 6px;
             opacity: 0;
-            animation: fadeIn 0.5s forwards, pulse 1.5s infinite ease-in-out;
+            animation: fadeIn 0.5s forwards, pulse 2s infinite ease-in-out;
         }
         
         .heart:before,
@@ -196,7 +195,7 @@
         
         @keyframes pulse {
             0% { transform: scale(1); }
-            50% { transform: scale(1.05); }
+            50% { transform: scale(1.15); }
             100% { transform: scale(1); }
         }
         
@@ -275,7 +274,7 @@
         <div class="impact-container">
             <div class="impact-number" id="newDonorsToday">--</div>
             <div class="impact-text">
-                nye fastegiverhjerter for et varmere samfunn
+                nye hjerter for et varmere samfunn
             </div>
             
             <div id="hearts-container" class="hearts-container">
@@ -284,26 +283,21 @@
             
             <div class="comparison">
                 <div class="comparison-item">
-                    <div class="comparison-label">I dag</div>
-                    <div class="comparison-value today" id="todayValue">--</div>
-                </div>
-                <div class="comparison-item">
-                    <div class="comparison-label">30-dagers gjennomsnitt</div>
+                    <div class="comparison-label">Snittet siste 30 dager er</div>
                     <div class="comparison-value average" id="averageValue">--</div>
-                </div>
-                <div class="comparison-item">
-                    <div id="trendIndicator" class="trend-indicator"></div>
                 </div>
             </div>
         </div>
         
         <div class="message-container animate__animated animate__fadeIn">
-            <div class="message-title">Hva dette betyr</div>
+            <div class="message-title">Hva betyr dette?</div>
             <div class="message-content">
-                Hver ny fast giver representerer en person som tror på vårt oppdrag. 
-                Deres støtte gjør det mulig for oss å planlegge for fremtiden og skape en bærekraftig påvirkning.
+                Hver nye fastgiver representerer en person som tror på vårt oppdrag. 
+                Deres støtte gjør det mulig for oss å bidra til et varmere samfunn.
                 <br><br>
-                <strong>Takk for at du er en del av denne reisen!</strong>
+                Årlig verdi for disse <span id="donorCount">--</span> nyrekrutterte givere er <span id="yearlyValueNewDonors">--</span> kr.
+                <br><br>
+                <strong>Vi er så takknemlige for deres støtte!</strong>
             </div>
         </div>
     </div>
@@ -323,16 +317,15 @@
                     // Update the main impact number
                     const newDonorsToday = data.n_new_donors;
                     const averageNewDonors = data.average_n_new_donors_last_30_days;
+                    const yearlyValueNewDonors = data.yearly_sum_new_donors;
                     
                     document.getElementById('newDonorsToday').textContent = newDonorsToday;
-                    document.getElementById('todayValue').textContent = newDonorsToday;
+                    document.getElementById('donorCount').textContent = newDonorsToday;
                     document.getElementById('averageValue').textContent = averageNewDonors;
+                    document.getElementById('yearlyValueNewDonors').textContent = yearlyValueNewDonors.toLocaleString('no-NO');
                     
                     // Create hearts based on the number of new donors
                     createHearts(newDonorsToday);
-                    
-                    // Show trend indicator
-                    showTrendIndicator(newDonorsToday, averageNewDonors);
                 })
                 .catch(error => {
                     console.error('Error fetching data:', error);
@@ -340,16 +333,15 @@
                     // If there's an error, show placeholder data
                     const placeholderDonors = Math.floor(Math.random() * 35) + 15;
                     const placeholderAverage = Math.floor(Math.random() * 30) + 15;
+                    const placeholderYearlyValue = placeholderDonors * 720; // Assuming average annual value of 720 per donor
                     
                     document.getElementById('newDonorsToday').textContent = placeholderDonors;
-                    document.getElementById('todayValue').textContent = placeholderDonors;
+                    document.getElementById('donorCount').textContent = placeholderDonors;
                     document.getElementById('averageValue').textContent = placeholderAverage;
+                    document.getElementById('yearlyValueNewDonors').textContent = placeholderYearlyValue.toLocaleString('no-NO');
                     
                     // Create hearts based on the placeholder number
                     createHearts(placeholderDonors);
-                    
-                    // Show trend indicator
-                    showTrendIndicator(placeholderDonors, placeholderAverage);
                 });
         }
         
@@ -362,30 +354,14 @@
             for (let i = 0; i < count; i++) {
                 const heart = document.createElement('div');
                 heart.className = 'heart';
-                // Stagger the animation start time
-                heart.style.animationDelay = (i * 0.05) + 's';
+                // All hearts will fade in together and pulse simultaneously
+                heart.style.animationDelay = '0s';
                 heartsContainer.appendChild(heart);
             }
         }
         
         // Function to show trend indicator
-        function showTrendIndicator(today, average) {
-            const trendIndicator = document.getElementById('trendIndicator');
-            
-            if (today > average) {
-                trendIndicator.innerHTML = '↑';
-                trendIndicator.className = 'trend-indicator up';
-                trendIndicator.title = 'Over gjennomsnittet';
-            } else if (today < average) {
-                trendIndicator.innerHTML = '↓';
-                trendIndicator.className = 'trend-indicator down';
-                trendIndicator.title = 'Under gjennomsnittet';
-            } else {
-                trendIndicator.innerHTML = '=';
-                trendIndicator.className = 'trend-indicator equal';
-                trendIndicator.title = 'Lik gjennomsnittet';
-            }
-        }
+        // Function to toggle the dropdown menu
         
         // Initial display update
         updateDisplay();

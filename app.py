@@ -54,6 +54,14 @@ API_KEY = os.environ.get('VENDOR_API_KEY', 'test_api_key_123')
 def report():
     return render_template('report.html')
 
+@app.route('/alternative-2')
+def alternative_2():
+    return render_template('report-2.html')
+
+@app.route('/alternative-3')
+def alternative_3():
+    return render_template('report-3.html')
+
 @app.route('/service')
 def service():
     # Get the device's IP address

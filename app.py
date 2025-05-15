@@ -51,10 +51,6 @@ class DonorStats(db.Model):
 API_KEY = os.environ.get('VENDOR_API_KEY', 'test_api_key_123')
 
 @app.route('/')
-def index():
-    return 'Hello, World!'
-
-@app.route('/report')
 def report():
     return render_template('report.html')
 
@@ -177,4 +173,5 @@ def populate_db():
 if __name__ == '__main__':
     with app.app_context():
         db.create_all()
-    app.run(debug=True)
+    # Use the specific IP address or 0.0.0.0 to listen on all interfaces
+    app.run(host='0.0.0.0', port=5001, debug=True)

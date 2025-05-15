@@ -1,0 +1,13 @@
+[Unit]
+Description=KB FG Monitor Flask Application
+After=network.target
+
+[Service]
+User=pi
+WorkingDirectory=/home/pi/kb_fg_monitor
+ExecStart=/home/pi/venv/bin/python /home/pi/kb_fg_monitor/app.py
+Restart=always
+Environment=FLASK_ENV=production
+
+[Install]
+WantedBy=multi-user.target

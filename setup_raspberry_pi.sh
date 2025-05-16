@@ -22,12 +22,25 @@ chown -R pi:pi /home/pi/kb_fg_monitor
 # 3. Create startup scripts
 echo -e "${GREEN}Creating startup scripts...${NC}"
 
-# Create Flask app startup script
-cat > /home/pi/kb_fg_monitor/run_flask.sh << 'EOF'
+# Create improved Flask app startup script
+cat > /home/pi/kb_fg_monitor/test_flask.sh << 'EOF'
 #!/bin/bash
-cd /home/pi/kb_fg_monitor
-source venv/bin/activate
-python app.py
+cd ~/kb_fg_monitor
+# Check if virtual environment exists
+if [ -d "venv" ]; then
+  echo "Activating virtual environment..."
+  source venv/bin/activate
+else
+  echo "Creating virtual environment..."
+  python3 -m venv venv
+  source venv/bin/activate
+  echo "Installing dependencies..."
+  pip install flask flask-sqlalchemy
+fi
+
+# Run the app
+echo "Starting Flask app..."
+python app.py > ~/flask.log 2>&1
 EOF
 
 # Create display control scripts
@@ -42,7 +55,8 @@ vcgencmd display_power 1
 EOF
 
 # Make scripts executable
-chmod +x /home/pi/kb_fg_monitor/run_flask.sh
+chmod +x /home/pi/kb_fg_monitor/test_flask.sh
+chmod +x /home/pi/kb_fg_monitor/hide_cursor.sh
 chmod +x /home/pi/kb_fg_monitor/display_off.sh
 chmod +x /home/pi/kb_fg_monitor/display_on.sh
 chown pi:pi /home/pi/kb_fg_monitor/*.sh
@@ -50,9 +64,10 @@ chown pi:pi /home/pi/kb_fg_monitor/*.sh
 # 4. Set up cron jobs
 echo -e "${GREEN}Setting up cron jobs...${NC}"
 
-# Add cron job to start Flask app at boot
+# Add cron job to start Flask app at boot and hide cursor
 cat > /tmp/flask_cron << 'EOF'
-@reboot sleep 30 && /home/pi/kb_fg_monitor/run_flask.sh > /home/pi/flask.log 2>&1 &
+@reboot sleep 30 && /home/pi/kb_fg_monitor/test_flask.sh &
+@reboot sleep 10 && /home/pi/kb_fg_monitor/hide_cursor.sh &
 # Turn display off at 5 PM (17:00)
 0 17 * * * /home/pi/kb_fg_monitor/display_off.sh
 # Turn display on at 7 AM (07:00)
@@ -79,12 +94,21 @@ Exec=/bin/bash -c "sleep 45 && chromium-browser --noerrdialogs --disable-infobar
 X-GNOME-Autostart-enabled=true
 EOF
 
+# Create improved cursor hiding script
+cat > /home/pi/kb_fg_monitor/hide_cursor.sh << 'EOF'
+#!/bin/bash
+# Kill any existing unclutter processes
+pkill unclutter || true
+# Start unclutter with aggressive settings
+DISPLAY=:0 unclutter -idle 0 -root &
+EOF
+
 # Create hide cursor autostart entry
 cat > /home/pi/.config/autostart/hide-cursor.desktop << 'EOF'
 [Desktop Entry]
 Type=Application
 Name=Hide Cursor
-Exec=unclutter -idle 0 -root
+Exec=/home/pi/kb_fg_monitor/hide_cursor.sh
 X-GNOME-Autostart-enabled=true
 EOF
 

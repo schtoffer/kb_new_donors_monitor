@@ -11,6 +11,14 @@ app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///donors.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['TEMPLATES_AUTO_RELOAD'] = True
 
+# Disable caching
+@app.after_request
+def add_header(response):
+    response.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate, post-check=0, pre-check=0, max-age=0'
+    response.headers['Pragma'] = 'no-cache'
+    response.headers['Expires'] = '-1'
+    return response
+
 template_dir = os.path.abspath('templates')
 app.template_folder = template_dir
 db = SQLAlchemy(app)
@@ -51,6 +59,10 @@ class DonorStats(db.Model):
 API_KEY = os.environ.get('VENDOR_API_KEY', 'test_api_key_123')
 
 @app.route('/')
+def index():
+    return render_template('report-3.html')
+
+@app.route('/report')
 def report():
     return render_template('report.html')
 
@@ -83,8 +95,11 @@ def service():
             hostname = socket.gethostname()
             ip_address = socket.gethostbyname(hostname)
     
-    # Format the IP address as a URL
-    url = f"http://{ip_address}:5000"
+    # Get the port the server is running on
+    port = request.environ.get('SERVER_PORT', 5001)
+    
+    # Format the IP address as a URL with the current port
+    url = f"http://{ip_address}:{port}"
     
     return render_template('service.html', ip_address=url)
 
@@ -181,5 +196,7 @@ def populate_db():
 if __name__ == '__main__':
     with app.app_context():
         db.create_all()
+    # Get port from environment variable or use default 5001
+    port = int(os.environ.get('PORT', 5001))
     # Use the specific IP address or 0.0.0.0 to listen on all interfaces
-    app.run(host='0.0.0.0', port=5001, debug=True)
+    app.run(host='0.0.0.0', port=port, debug=True)

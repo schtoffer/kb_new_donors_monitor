@@ -96,7 +96,7 @@ def service():
             ip_address = socket.gethostbyname(hostname)
     
     # Get the port the server is running on
-    port = request.environ.get('SERVER_PORT', 5001)
+    port = request.environ.get('SERVER_PORT', 5000)
     
     # Format the IP address as a URL with the current port
     url = f"http://{ip_address}:{port}"
@@ -196,7 +196,7 @@ def populate_db():
 if __name__ == '__main__':
     with app.app_context():
         db.create_all()
-    # Get port from environment variable or use default 5001
-    port = int(os.environ.get('PORT', 5001))
+    # Get port from environment variable or use default 5000
+    port = int(os.environ.get('PORT', 5000))
     # Use the specific IP address or 0.0.0.0 to listen on all interfaces
     app.run(host='0.0.0.0', port=port, debug=True)

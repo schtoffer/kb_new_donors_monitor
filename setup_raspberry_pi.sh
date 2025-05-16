@@ -34,9 +34,11 @@ else
   echo "Creating virtual environment..."
   python3 -m venv venv
   source venv/bin/activate
-  echo "Installing dependencies..."
-  pip install flask flask-sqlalchemy
 fi
+
+# Always install/update dependencies from requirements.txt
+echo "Installing dependencies from requirements.txt..."
+pip install -r requirements.txt
 
 # Run the app
 echo "Starting Flask app..."

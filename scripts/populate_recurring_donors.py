@@ -14,8 +14,9 @@ import random
 from datetime import datetime, timedelta
 import string
 
-# Payment method options
-PAYMENT_METHODS = ['vippsrecurring', 'striprecurring']
+# Payment method options with weights to make Vipps most common
+PAYMENT_METHODS = ['Vipps', 'SMS', 'Stripe', 'Avtalegiro']
+PAYMENT_METHOD_WEIGHTS = [0.6, 0.15, 0.15, 0.1]  # 60% Vipps
 
 # Product type options
 PRODUCT_TYPES = ['FG', 'MI']
@@ -29,20 +30,27 @@ COUNTRIES = ['NO', 'SE', 'DK', 'FI']
 # Name types
 NAME_TYPES = ['P', 'D', 'C']
 
-def generate_agreement_number(length=6):
-    """Generate a random agreement number"""
-    return ''.join(random.choices(string.digits, k=length))
+def generate_agreement_number():
+    """Generate a random agreement number between 1 and 5, with 95% chance of being 1"""
+    if random.random() < 0.95:  # 95% chance of returning 1
+        return '1'
+    else:
+        return str(random.randint(2, 5))
 
 def generate_random_donor(start_date):
     """Generate random donor data"""
+    # Define amounts with 240 having higher probability
+    amounts = [60, 120, 240, 320, 380]
+    amount_weights = [0.15, 0.2, 0.4, 0.15, 0.1]  # 240 has 40% probability
+    
     return {
-        'name_id': random.randint(1000, 9999),
-        'payment_method': random.choice(PAYMENT_METHODS),
+        'name_id': random.randint(10000000, 99999999),  # 8 digits
+        'payment_method': random.choices(PAYMENT_METHODS, weights=PAYMENT_METHOD_WEIGHTS)[0],
         'agreement_number': generate_agreement_number(),
-        'amount': random.randint(40, 240),
+        'amount': random.choices(amounts, weights=amount_weights)[0],
         'interval': random.choice(INTERVALS),
         'startdate': start_date,
-        'producttype_id': random.choice(PRODUCT_TYPES),
+        'producttype_id': random.choice(PRODUCT_TYPES),  # Only MI or FG
         'productvariant_id': None,
         'project_id': random.randint(0, 10),
         'campaign_id': random.randint(100, 200),

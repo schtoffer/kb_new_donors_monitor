@@ -1,0 +1,23 @@
+// This is an example of how I think a post request to the api should look like
+
+curl --location -g '{{baseUrl}}/api/new_recurring_donor' \
+--data-raw '{
+    "campaign_id": 132, // int
+    "payment_method": "vippsrecurring", // string
+    "classification_id_success": "BG", // string
+    "name" : {
+        "name_id": "Ola", // string
+        "zip": "4601", // int
+        "country_id": "NO", // string
+        "nametype_id": "D" // string
+    },
+    "agreement": {
+        "agreement_number": "123456", // int
+        "producttype_id": "FG", // string
+        "project_id": 0, // int
+        "productvariant_id": null, // int
+        "amount": 100, // int
+        "interval": "Monthly", // string
+        "startdate": "01.09.2023", // string
+    }
+}'

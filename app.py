@@ -5,6 +5,7 @@ import random
 import os
 import secrets
 import hashlib
+import json
 
 app = Flask(__name__)
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///donors.db'
@@ -30,6 +31,59 @@ class DonorStats(db.Model):
     yearly_sum_new_donors = db.Column(db.Float, nullable=False)
     n_total_new_donors = db.Column(db.Integer, nullable=False)
     yearly_sum_all_donors = db.Column(db.Float, nullable=False)
+
+class RecurringDonor(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    # Top level fields
+    campaign_id = db.Column(db.Integer, nullable=False)
+    payment_method = db.Column(db.String(50), nullable=False)
+    classification_id_success = db.Column(db.String(10), nullable=False)
+    
+    # Name fields
+    name_id = db.Column(db.Integer, nullable=False)
+    zip_code = db.Column(db.String(20), nullable=False)
+    country_id = db.Column(db.String(10), nullable=False)
+    nametype_id = db.Column(db.String(10), nullable=False)
+    
+    # Agreement fields
+    agreement_number = db.Column(db.String(50), nullable=False)
+    producttype_id = db.Column(db.String(10), nullable=False)
+    project_id = db.Column(db.Integer, nullable=False)
+    productvariant_id = db.Column(db.Integer, nullable=True)
+    amount = db.Column(db.Float, nullable=False)
+    interval = db.Column(db.String(20), nullable=False)
+    startdate = db.Column(db.Date, nullable=False)
+    
+    # Define a unique constraint on name_id and agreement_number
+    __table_args__ = (db.UniqueConstraint('name_id', 'agreement_number', name='unique_name_agreement'),)
+    
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'created_at': self.created_at.isoformat() if self.created_at else None,
+            'updated_at': self.updated_at.isoformat() if self.updated_at else None,
+            'campaign_id': self.campaign_id,
+            'payment_method': self.payment_method,
+            'classification_id_success': self.classification_id_success,
+            'name': {
+                'name_id': self.name_id,  # Already an integer in the database
+                'zip': self.zip_code,
+                'country_id': self.country_id,
+                'nametype_id': self.nametype_id
+            },
+            'agreement': {
+                'agreement_number': self.agreement_number,
+                'producttype_id': self.producttype_id,
+                'project_id': self.project_id,
+                'productvariant_id': self.productvariant_id,
+                'amount': self.amount,
+                'interval': self.interval,
+                'startdate': self.startdate.strftime('%d.%m.%Y') if self.startdate else None
+            }
+        }
 
     @classmethod
     def update_or_create(cls, date, n_new_donors, yearly_sum_new_donors, n_total_new_donors, yearly_sum_all_donors):
@@ -73,6 +127,45 @@ def alternative_2():
 @app.route('/alternative-3')
 def alternative_3():
     return render_template('report-3.html')
+
+@app.route('/recurring-donors')
+def recurring_donors():
+    # Get all recurring donors from the database
+    donors = RecurringDonor.query.all()
+    
+    # Prepare data for the template
+    donor_data = []
+    total_amount = 0
+    unique_products = set()
+    
+    for donor in donors:
+        donor_info = {
+            'name_id': donor.name_id,
+            'payment_method': donor.payment_method,
+            'agreement_number': donor.agreement_number,
+            'amount': donor.amount,
+            'interval': donor.interval,
+            'startdate': donor.startdate.strftime('%d.%m.%Y') if donor.startdate else '',
+            'producttype_id': donor.producttype_id
+        }
+        donor_data.append(donor_info)
+        total_amount += donor.amount
+        
+        # Add product to the unique products set
+        if donor.producttype_id:
+            unique_products.add(donor.producttype_id)
+    
+    # Format the total amount with thousand separator
+    formatted_total = '{:,.0f}'.format(total_amount).replace(',', ' ')
+    
+    # Convert the set to a sorted list for the template
+    product_list = sorted(list(unique_products))
+    
+    return render_template('recurring_donors.html', 
+                           donors=donor_data, 
+                           total_donors=len(donor_data), 
+                           total_amount=formatted_total,
+                           products=product_list)
 
 @app.route('/service')
 def service():
@@ -192,6 +285,160 @@ def populate_db():
         current_date += timedelta(days=1)
     
     return 'Database populated successfully!'
+
+@app.route('/api/new-recurring-donor', methods=['POST'])
+def new_recurring_donor():
+    # Authenticate the request
+    auth_header = request.headers.get('Authorization')
+    if not auth_header or not auth_header.startswith('Bearer '):
+        return jsonify({'error': 'Missing or invalid authorization header'}), 401
+    
+    token = auth_header.split(' ')[1]
+    if not secrets.compare_digest(token, API_KEY):
+        return jsonify({'error': 'Invalid API key'}), 401
+    
+    # Validate the request data
+    data = request.get_json()
+    if not data:
+        return jsonify({'error': 'No data provided'}), 400
+    
+    # Check required fields
+    required_top_level = ['campaign_id', 'payment_method', 'classification_id_success', 'name', 'agreement']
+    required_name = ['name_id', 'zip', 'country_id', 'nametype_id']
+    required_agreement = ['agreement_number', 'producttype_id', 'project_id', 'amount', 'interval', 'startdate']
+    
+    # Validate top-level fields
+    for field in required_top_level:
+        if field not in data:
+            return jsonify({'error': f'Missing required field: {field}'}), 400
+    
+    # Validate name fields
+    for field in required_name:
+        if field not in data['name']:
+            return jsonify({'error': f'Missing required name field: {field}'}), 400
+    
+    # Validate agreement fields
+    for field in required_agreement:
+        if field not in data['agreement']:
+            return jsonify({'error': f'Missing required agreement field: {field}'}), 400
+    
+    try:
+        # Check if a record with the same name_id and agreement_number already exists
+        # Ensure name_id is treated as an integer
+        name_id = int(data['name']['name_id'])
+        existing_record = RecurringDonor.query.filter_by(
+            name_id=name_id,
+            agreement_number=data['agreement']['agreement_number']
+        ).first()
+        
+        if existing_record:
+            # Update the existing record
+            existing_record.campaign_id = data['campaign_id']
+            existing_record.payment_method = data['payment_method']
+            existing_record.classification_id_success = data['classification_id_success']
+            
+            # Update name information
+            existing_record.zip_code = data['name']['zip']
+            existing_record.country_id = data['name']['country_id']
+            existing_record.nametype_id = data['name']['nametype_id']
+            
+            # Update agreement information
+            existing_record.producttype_id = data['agreement']['producttype_id']
+            existing_record.project_id = data['agreement']['project_id']
+            existing_record.productvariant_id = data['agreement'].get('productvariant_id')
+            existing_record.amount = data['agreement']['amount']
+            existing_record.interval = data['agreement']['interval']
+            # Parse startdate from string to date object
+            try:
+                # Try to parse date in DD.MM.YYYY format
+                existing_record.startdate = datetime.strptime(data['agreement']['startdate'], '%d.%m.%Y').date()
+            except ValueError:
+                try:
+                    # Fallback to YYYY-MM-DD format
+                    existing_record.startdate = datetime.strptime(data['agreement']['startdate'], '%Y-%m-%d').date()
+                except ValueError:
+                    return jsonify({'error': 'Invalid startdate format. Use DD.MM.YYYY or YYYY-MM-DD'}), 400
+            
+            db.session.commit()
+            return jsonify({
+                'status': 'success',
+                'message': 'Recurring donor updated successfully',
+                'donor': existing_record.to_dict()
+            }), 200
+        else:
+            # Create a new record
+            new_donor = RecurringDonor(
+                campaign_id=data['campaign_id'],
+                payment_method=data['payment_method'],
+                classification_id_success=data['classification_id_success'],
+                
+                # Name information
+                name_id=int(data['name']['name_id']),
+                zip_code=data['name']['zip'],
+                country_id=data['name']['country_id'],
+                nametype_id=data['name']['nametype_id'],
+                
+                # Agreement information
+                agreement_number=data['agreement']['agreement_number'],
+                producttype_id=data['agreement']['producttype_id'],
+                project_id=data['agreement']['project_id'],
+                productvariant_id=data['agreement'].get('productvariant_id'),
+                amount=data['agreement']['amount'],
+                interval=data['agreement']['interval'],
+                # Parse startdate from string to date object
+                startdate=parse_date(data['agreement']['startdate'])
+            )
+            
+            db.session.add(new_donor)
+            db.session.commit()
+            
+            return jsonify({
+                'status': 'success',
+                'message': 'Recurring donor created successfully',
+                'donor': new_donor.to_dict()
+            }), 201
+            
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': str(e)}), 500
+
+def parse_date(date_string):
+    """Parse a date string in either DD.MM.YYYY or YYYY-MM-DD format"""
+    try:
+        # Try DD.MM.YYYY format first (as in the example)
+        return datetime.strptime(date_string, '%d.%m.%Y').date()
+    except ValueError:
+        try:
+            # Fallback to YYYY-MM-DD format
+            return datetime.strptime(date_string, '%Y-%m-%d').date()
+        except ValueError:
+            # If both fail, raise an exception
+            raise ValueError(f"Invalid date format: {date_string}. Use DD.MM.YYYY or YYYY-MM-DD")
+
+@app.route('/api/recurring-donors', methods=['GET'])
+def get_recurring_donors():
+    """Get all recurring donors or filter by name_id"""
+    name_id = request.args.get('name_id')
+    
+    try:
+        if name_id:
+            try:
+                # Convert name_id to integer for filtering
+                name_id_int = int(name_id)
+                donors = RecurringDonor.query.filter_by(name_id=name_id_int).all()
+            except ValueError:
+                # If name_id can't be converted to int, return empty result
+                donors = []
+        else:
+            donors = RecurringDonor.query.all()
+        
+        return jsonify({
+            'status': 'success',
+            'count': len(donors),
+            'donors': [donor.to_dict() for donor in donors]
+        }), 200
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
 if __name__ == '__main__':
     with app.app_context():

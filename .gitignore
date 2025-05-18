@@ -50,3 +50,4 @@ instance/
 .Trashes
 ehthumbs.db
 Thumbs.db
+instance/donors.db

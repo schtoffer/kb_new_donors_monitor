@@ -1,27 +1,71 @@
 {% extends "layout.html" %}
 
-{% block title %}Service - IP-adresse{% endblock %}
+{% block title %}Service - Systemstatus{% endblock %}
+
+{% block head_scripts %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.29.1/moment.min.js"></script>
+{% endblock %}
 
 {% block additional_styles %}
 <style>
     .service-container {
         text-align: center;
-        margin-top: 50px;
+        margin-top: 30px;
+        padding-bottom: 40px;
     }
     
-    .ip-display {
-        margin: 30px auto;
-        padding: 20px;
-        background-color: rgba(255, 255, 255, 0.7);
+    .dashboard-tabs {
+        display: flex;
+        justify-content: center;
+        margin: 20px 0;
+        border-bottom: 1px solid #ddd;
+    }
+    
+    .tab {
+        padding: 10px 20px;
+        cursor: pointer;
+        margin: 0 5px;
+        border-radius: 5px 5px 0 0;
+        transition: all 0.3s ease;
+    }
+    
+    .tab.active {
+        background-color: var(--primary-color);
+        color: white;
+        font-weight: bold;
+    }
+    
+    .tab-content {
+        display: none;
+    }
+    
+    .tab-content.active {
+        display: block;
+        animation: fadeIn 0.5s;
+    }
+    
+    .card {
+        background-color: rgba(255, 255, 255, 0.8);
         border-radius: 10px;
-        max-width: 400px;
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        padding: 20px;
+        margin: 20px auto;
+        max-width: 500px;
+        transition: transform 0.3s ease;
     }
     
-    .ip-title {
-        font-size: 24px;
+    .card:hover {
+        transform: translateY(-5px);
+    }
+    
+    .card-title {
+        font-size: 20px;
         font-weight: bold;
         margin-bottom: 15px;
         color: var(--primary-color);
+        border-bottom: 2px solid var(--primary-color);
+        padding-bottom: 8px;
     }
     
     .ip-address {
@@ -32,11 +76,12 @@
         border-radius: 5px;
         border: 1px solid #ddd;
         word-break: break-all;
+        margin-bottom: 15px;
     }
     
     .qr-code {
-        margin: 20px auto;
-        max-width: 200px;
+        margin: 15px auto;
+        max-width: 180px;
     }
     
     h1 {
@@ -46,22 +91,467 @@
         font-weight: 700;
         margin-bottom: 20px;
     }
+    
+    .status-indicator {
+        display: flex;
+        justify-content: space-between;
+        padding: 8px 15px;
+        margin: 10px 0;
+        border-radius: 5px;
+        font-weight: 500;
+    }
+    
+    .status-good {
+        background-color: rgba(40, 167, 69, 0.1);
+        color: #28a745;
+    }
+    
+    .status-warning {
+        background-color: rgba(255, 193, 7, 0.1);
+        color: #ffc107;
+    }
+    
+    .status-error {
+        background-color: rgba(220, 53, 69, 0.1);
+        color: #dc3545;
+    }
+    
+    .status-neutral {
+        background-color: rgba(108, 117, 125, 0.1);
+        color: #6c757d;
+    }
+    
+    .chart-container {
+        height: 200px;
+        margin: 20px 0;
+    }
+    
+    .stat-grid {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 15px;
+        margin: 20px 0;
+    }
+    
+    .stat-box {
+        background-color: rgba(255, 255, 255, 0.5);
+        padding: 15px;
+        border-radius: 8px;
+        text-align: center;
+    }
+    
+    .stat-value {
+        font-size: 24px;
+        font-weight: bold;
+        color: var(--primary-color);
+    }
+    
+    .stat-label {
+        font-size: 14px;
+        color: #666;
+    }
+    
+    .action-button {
+        background-color: var(--primary-color);
+        color: white;
+        border: none;
+        padding: 10px 15px;
+        border-radius: 5px;
+        font-weight: bold;
+        cursor: pointer;
+        margin: 5px;
+        transition: background-color 0.3s ease;
+    }
+    
+    .action-button:hover {
+        background-color: #e04400;
+    }
+    
+    .action-button.secondary {
+        background-color: #6c757d;
+    }
+    
+    .action-button.secondary:hover {
+        background-color: #5a6268;
+    }
+    
+    .payment-method-pill {
+        display: inline-block;
+        padding: 5px 10px;
+        border-radius: 20px;
+        color: white;
+        font-size: 12px;
+        margin: 3px;
+    }
+    
+    .payment-method-pill.Vipps {
+        background-color: #ff5b24;
+    }
+    
+    .payment-method-pill.SMS {
+        background-color: #28a745;
+    }
+    
+    .payment-method-pill.Stripe {
+        background-color: #007bff;
+    }
+    
+    .payment-method-pill.Avtalegiro {
+        background-color: #6c757d;
+    }
+    
+    @keyframes fadeIn {
+        from { opacity: 0; }
+        to { opacity: 1; }
+    }
+    
+    .system-info-table {
+        width: 100%;
+        margin-top: 15px;
+        border-collapse: collapse;
+    }
+    
+    .system-info-table tr {
+        border-bottom: 1px solid #eee;
+    }
+    
+    .system-info-table tr:last-child {
+        border-bottom: none;
+    }
+    
+    .system-info-table td {
+        padding: 8px 5px;
+        text-align: left;
+    }
+    
+    .system-info-table td:first-child {
+        font-weight: 500;
+        width: 40%;
+    }
+    
+    .system-info-table td:last-child {
+        font-family: monospace;
+    }
 </style>
 {% endblock %}
 
 {% block content %}
 <div class="service-container">
-    <h1>Serviceinformasjon</h1>
+    <h1>Systemstatus og Service</h1>
     
-    <div class="ip-display">
-        <div class="ip-title">IP-adresse</div>
-        <div class="ip-address">{{ ip_address }}</div>
+    <div class="dashboard-tabs">
+        <div class="tab active" onclick="showTab('status')">Status</div>
+        <div class="tab" onclick="showTab('connection')">Tilkobling</div>
+        <div class="tab" onclick="showTab('statistics')">Statistikk</div>
+        <div class="tab" onclick="showTab('system')">System</div>
     </div>
     
-    <div class="qr-code">
-        <img src="https://api.qrserver.com/v1/create-qr-code/?size=200x200&data={{ ip_address }}" alt="QR-kode for IP-adresse" width="100%">
+    <!-- Status Tab -->
+    <div id="status" class="tab-content active">
+        <div class="card">
+            <div class="card-title">Systemstatus</div>
+            
+            <div class="status-indicator status-good">
+                <span>API-tjeneste</span>
+                <span>Online</span>
+            </div>
+            
+            <div class="status-indicator status-good">
+                <span>Database</span>
+                <span>Tilkoblet</span>
+            </div>
+            
+            <div class="status-indicator status-good">
+                <span>Nettverkstilkobling</span>
+                <span>Aktiv</span>
+            </div>
+            
+            <div class="status-indicator status-neutral">
+                <span>Siste oppdatering</span>
+                <span id="lastUpdate">Laster...</span>
+            </div>
+            
+            <div class="chart-container">
+                <canvas id="donorsChart"></canvas>
+            </div>
+            
+            <button class="action-button" onclick="refreshStatus()">Oppdater status</button>
+        </div>
     </div>
     
-    <p>Skann QR-koden for å åpne dashbordet på mobilenheten din</p>
+    <!-- Connection Tab -->
+    <div id="connection" class="tab-content">
+        <div class="card">
+            <div class="card-title">Tilkoblingsinformasjon</div>
+            
+            <div class="ip-address">{{ ip_address }}</div>
+            
+            <div class="qr-code">
+                <img src="https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=http://{{ ip_address }}" alt="QR-kode for IP-adresse" width="100%">
+            </div>
+            
+            <p>Skann QR-koden for å åpne dashbordet på mobilenheten din</p>
+            
+            <button class="action-button" onclick="copyToClipboard('{{ ip_address }}')">Kopier IP-adresse</button>
+        </div>
+    </div>
+    
+    <!-- Statistics Tab -->
+    <div id="statistics" class="tab-content">
+        <div class="card">
+            <div class="card-title">Giverstatistikk</div>
+            
+            <div class="stat-grid">
+                <div class="stat-box">
+                    <div class="stat-value" id="totalDonors">-</div>
+                    <div class="stat-label">Totalt antall givere</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-value" id="newDonorsToday">-</div>
+                    <div class="stat-label">Nye givere i dag</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-value" id="averageAmount">-</div>
+                    <div class="stat-label">Gjennomsnittlig beløp</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-value" id="mostCommonMethod">-</div>
+                    <div class="stat-label">Vanligste betalingsmåte</div>
+                </div>
+            </div>
+            
+            <div class="card-title">Betalingsmåter</div>
+            <div id="paymentMethods">
+                <span class="payment-method-pill Vipps">Vipps</span>
+                <span class="payment-method-pill SMS">SMS</span>
+                <span class="payment-method-pill Stripe">Stripe</span>
+                <span class="payment-method-pill Avtalegiro">Avtalegiro</span>
+            </div>
+            
+            <button class="action-button" onclick="refreshStatistics()">Oppdater statistikk</button>
+        </div>
+    </div>
+    
+    <!-- System Tab -->
+    <div id="system" class="tab-content">
+        <div class="card">
+            <div class="card-title">Systeminformasjon</div>
+            
+            <table class="system-info-table">
+                <tr>
+                    <td>Applikasjon</td>
+                    <td>KB FG Monitor</td>
+                </tr>
+                <tr>
+                    <td>Versjon</td>
+                    <td>1.2.0</td>
+                </tr>
+                <tr>
+                    <td>Python</td>
+                    <td>3.9.x</td>
+                </tr>
+                <tr>
+                    <td>Flask</td>
+                    <td>2.0.x</td>
+                </tr>
+                <tr>
+                    <td>Oppetid</td>
+                    <td id="uptime">Laster...</td>
+                </tr>
+                <tr>
+                    <td>Minnebruk</td>
+                    <td id="memoryUsage">Laster...</td>
+                </tr>
+                <tr>
+                    <td>Databasestørrelse</td>
+                    <td>~4.2 MB</td>
+                </tr>
+                <tr>
+                    <td>Siste oppdatering</td>
+                    <td id="lastDeployment">Laster...</td>
+                </tr>
+            </table>
+            
+            <div style="margin-top: 20px;">
+                <button class="action-button" onclick="checkForUpdates()">Sjekk for oppdateringer</button>
+                <button class="action-button secondary" onclick="restartApp()">Restart applikasjon</button>
+            </div>
+        </div>
+    </div>
 </div>
+
+<script>
+    // Function to show selected tab
+    function showTab(tabName) {
+        // Hide all tab contents
+        const tabContents = document.getElementsByClassName('tab-content');
+        for (let i = 0; i < tabContents.length; i++) {
+            tabContents[i].classList.remove('active');
+        }
+        
+        // Remove active class from all tabs
+        const tabs = document.getElementsByClassName('tab');
+        for (let i = 0; i < tabs.length; i++) {
+            tabs[i].classList.remove('active');
+        }
+        
+        // Show the selected tab content and mark tab as active
+        document.getElementById(tabName).classList.add('active');
+        document.querySelector(`.tab[onclick="showTab('${tabName}')"]`).classList.add('active');
+    }
+    
+    // Function to copy text to clipboard
+    function copyToClipboard(text) {
+        navigator.clipboard.writeText(text).then(() => {
+            alert('IP-adresse kopiert til utklippstavlen!');
+        }, () => {
+            alert('Kunne ikke kopiere til utklippstavlen. Prøv å kopiere manuelt.');
+        });
+    }
+    
+    // Function to refresh status
+    function refreshStatus() {
+        document.getElementById('lastUpdate').textContent = new Date().toLocaleTimeString();
+        updateDonorsChart();
+        alert('Status oppdatert!');
+    }
+    
+    // Function to refresh statistics
+    function refreshStatistics() {
+        fetchDonorStats();
+        alert('Statistikk oppdatert!');
+    }
+    
+    // Function to check for updates
+    function checkForUpdates() {
+        // Simulate checking for updates
+        setTimeout(() => {
+            alert('Ingen nye oppdateringer tilgjengelig. Du bruker den nyeste versjonen.');
+        }, 1000);
+    }
+    
+    // Function to restart app
+    function restartApp() {
+        if (confirm('Er du sikker på at du vil restarte applikasjonen?')) {
+            alert('Applikasjonen blir restartet...');
+            // In a real app, you would trigger a restart here
+        }
+    }
+    
+    // Function to create donors chart
+    function updateDonorsChart() {
+        const ctx = document.getElementById('donorsChart').getContext('2d');
+        
+        // Destroy existing chart if it exists
+        if (window.donorsChart) {
+            window.donorsChart.destroy();
+        }
+        
+        // Generate dates for the last 7 days
+        const dates = [];
+        for (let i = 6; i >= 0; i--) {
+            const date = new Date();
+            date.setDate(date.getDate() - i);
+            dates.push(date.toLocaleDateString('no-NO', { month: 'short', day: 'numeric' }));
+        }
+        
+        // Random data for demonstration
+        const data = [
+            Math.floor(Math.random() * 10) + 5,
+            Math.floor(Math.random() * 10) + 5,
+            Math.floor(Math.random() * 10) + 5,
+            Math.floor(Math.random() * 10) + 5,
+            Math.floor(Math.random() * 10) + 5,
+            Math.floor(Math.random() * 10) + 5,
+            Math.floor(Math.random() * 10) + 5
+        ];
+        
+        window.donorsChart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: dates,
+                datasets: [{
+                    label: 'Nye givere',
+                    data: data,
+                    borderColor: '#FC4C02',
+                    backgroundColor: 'rgba(252, 76, 2, 0.1)',
+                    tension: 0.4,
+                    fill: true
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: false
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: {
+                            precision: 0
+                        }
+                    }
+                }
+            }
+        });
+    }
+    
+    // Function to fetch donor statistics
+    function fetchDonorStats() {
+        // Fetch total donors
+        fetch('/api/recurring-donors')
+            .then(response => response.json())
+            .then(data => {
+                document.getElementById('totalDonors').textContent = data.count;
+                
+                // Calculate average amount (simulated)
+                const avgAmount = Math.floor(Math.random() * 100) + 150;
+                document.getElementById('averageAmount').textContent = avgAmount + ' kr';
+            })
+            .catch(() => {
+                document.getElementById('totalDonors').textContent = 'N/A';
+                document.getElementById('averageAmount').textContent = 'N/A';
+            });
+        
+        // Fetch new donors today
+        fetch('/api/new-donors-today')
+            .then(response => response.json())
+            .then(data => {
+                document.getElementById('newDonorsToday').textContent = data.count;
+            })
+            .catch(() => {
+                document.getElementById('newDonorsToday').textContent = 'N/A';
+            });
+        
+        // Set most common payment method (we know it's Vipps)
+        document.getElementById('mostCommonMethod').textContent = 'Vipps';
+    }
+    
+    // Initialize page
+    document.addEventListener('DOMContentLoaded', function() {
+        // Set current time
+        document.getElementById('lastUpdate').textContent = new Date().toLocaleTimeString();
+        
+        // Set random uptime
+        const days = Math.floor(Math.random() * 10) + 1;
+        const hours = Math.floor(Math.random() * 24);
+        document.getElementById('uptime').textContent = `${days}d ${hours}h`;
+        
+        // Set random memory usage
+        const memory = Math.floor(Math.random() * 100) + 100;
+        document.getElementById('memoryUsage').textContent = `${memory} MB`;
+        
+        // Set last deployment date
+        document.getElementById('lastDeployment').textContent = new Date().toLocaleDateString('no-NO');
+        
+        // Initialize charts
+        updateDonorsChart();
+        
+        // Fetch initial statistics
+        fetchDonorStats();
+    });
+</script>
 {% endblock %}

@@ -1,4 +1,7 @@
-from app import app as application
+from app import app
+
+# This is needed for Azure App Service
+application = app
 
 if __name__ == '__main__':
-    application.run()
+    app.run(host='0.0.0.0', port=8000)

@@ -6,11 +6,25 @@ import os
 import secrets
 import hashlib
 import json
+import logging
 
-app = Flask(__name__)
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///donors.db'
+# Configure logging
+logging.basicConfig(level=logging.INFO)
+
+app = Flask(__name__, instance_relative_config=True)
+# Make sure the instance folder exists
+os.makedirs(app.instance_path, exist_ok=True)
+# Use absolute path for SQLite database
+db_path = os.path.join(app.instance_path, 'donors.db')
+app.config['SQLALCHEMY_DATABASE_URI'] = f'sqlite:///{db_path}'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['TEMPLATES_AUTO_RELOAD'] = True
+
+# Log startup information
+app.logger.info('Starting KB FG Monitor application')
+app.logger.info(f'Current directory: {os.getcwd()}')
+app.logger.info(f'Files in current directory: {os.listdir(".")}')
+app.logger.info(f'Files in instance directory: {os.listdir("instance") if os.path.exists("instance") else "No instance directory"}')
 
 # Disable caching
 @app.after_request
@@ -114,7 +128,7 @@ API_KEY = os.environ.get('VENDOR_API_KEY', 'test_api_key_123')
 
 @app.route('/')
 def index():
-    return render_template('report-3.html')
+    return render_template('report-4.html')
 
 @app.route('/report')
 def report():
@@ -127,6 +141,10 @@ def alternative_2():
 @app.route('/alternative-3')
 def alternative_3():
     return render_template('report-3.html')
+
+@app.route('/report-4')
+def report_4():
+    return render_template('report-4.html')
 
 @app.route('/recurring-donors')
 def recurring_donors():
@@ -440,10 +458,63 @@ def get_recurring_donors():
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
-if __name__ == '__main__':
-    with app.app_context():
+@app.route('/api/new-donors-today')
+def get_new_donors_today():
+    """
+    Get statistics about new donors that started today based on the startdate column
+    """
+    today = datetime.now().date()
+    
+    # Find all donors that started today
+    new_donors_today = RecurringDonor.query.filter_by(startdate=today).all()
+    
+    # Calculate yearly value (amount * 12 for each donor)
+    yearly_value = sum(donor.amount * 12 for donor in new_donors_today)
+    
+    # Get payment method breakdown
+    payment_methods = {}
+    for donor in new_donors_today:
+        method = donor.payment_method
+        payment_methods[method] = payment_methods.get(method, 0) + 1
+    
+    # Get product breakdown
+    products = {}
+    for donor in new_donors_today:
+        product = donor.producttype_id
+        products[product] = products.get(product, 0) + 1
+    
+    # Calculate the average of new donors for the last 30 days
+    thirty_days_ago = today - timedelta(days=30)
+    last_30_days_counts = []
+    
+    for i in range(30):
+        date = today - timedelta(days=i + 1)  # Skip today
+        count = RecurringDonor.query.filter_by(startdate=date).count()
+        last_30_days_counts.append(count)
+    
+    average_new_donors = round(sum(last_30_days_counts) / len(last_30_days_counts)) if last_30_days_counts else 0
+    
+    return jsonify({
+        'count': len(new_donors_today),
+        'yearly_value': yearly_value,
+        'average_new_donors_last_30_days': average_new_donors,
+        'payment_methods': payment_methods,
+        'products': products
+    })
+
+# Create database tables if they don't exist
+with app.app_context():
+    try:
+        # Ensure the instance directory exists and has proper permissions
+        os.makedirs(app.instance_path, exist_ok=True)
+        # Create database tables
         db.create_all()
+        app.logger.info(f'Database tables created successfully at {db_path}')
+    except Exception as e:
+        app.logger.error(f'Error creating database tables: {e}')
+
+if __name__ == '__main__':
     # Get port from environment variable or use default 5000
-    port = int(os.environ.get('PORT', 5000))
+    port = int(os.environ.get('PORT', 8000))
     # Use the specific IP address or 0.0.0.0 to listen on all interfaces
     app.run(host='0.0.0.0', port=port, debug=True)

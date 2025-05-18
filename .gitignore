@@ -51,3 +51,8 @@ instance/
 ehthumbs.db
 Thumbs.db
 instance/donors.db
+
+# Log files and archives
+webapp_logs/
+*.zip
+*.log

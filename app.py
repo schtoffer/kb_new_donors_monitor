@@ -218,25 +218,114 @@ def kart():
     conn.close()
     
     # Create a map centered on Norway
-    m = folium.Map(location=[62.0, 10.0], zoom_start=5, tiles='CartoDB positron')
+    m = folium.Map(location=[65.0, 13.0], zoom_start=4, tiles='CartoDB positron')
     
-    # Convert data to a format suitable for Folium
-    fylke_dict = {row[0]: row[1] for row in fylke_data}
+    # Define mapping for fylke names to match current Norwegian counties (2024)
+    fylke_mapping = {
+        'Oslo': 'Oslo',
+        'Rogaland': 'Rogaland',
+        'Møre og Romsdal': 'Møre og Romsdal',
+        'Nordland': 'Nordland',
+        'Trøndelag': 'Trøndelag',
+        'Troms og Finnmark': 'Troms og Finnmark',
+        'Vestland': 'Vestland',
+        'Agder': 'Agder',
+        'Innlandet': 'Innlandet',
+        'Vestfold og Telemark': 'Vestfold og Telemark',
+        'Viken': 'Viken',
+        # Map old county names to new ones
+        'Akershus': 'Viken',
+        'Buskerud': 'Viken',
+        'Østfold': 'Viken',
+        'Vestfold': 'Vestfold og Telemark',
+        'Telemark': 'Vestfold og Telemark',
+        'Oppland': 'Innlandet',
+        'Hedmark': 'Innlandet',
+        'Aust-Agder': 'Agder',
+        'Vest-Agder': 'Agder',
+        'Hordaland': 'Vestland',
+        'Sogn og Fjordane': 'Vestland',
+        'Troms': 'Troms og Finnmark',
+        'Finnmark': 'Troms og Finnmark'
+    }
     
-    # Create a choropleth map
-    folium.Choropleth(
-        geo_data='static/data/norway_counties.geojson',
+    # Convert data to a format suitable for Folium, mapping fylke names
+    fylke_dict = {}
+    for row in fylke_data:
+        fylke_name = row[0]
+        count = row[1]
+        # Map to current county name if available
+        if fylke_name in fylke_mapping:
+            mapped_name = fylke_mapping[fylke_name]
+            if mapped_name in fylke_dict:
+                fylke_dict[mapped_name] += count
+            else:
+                fylke_dict[mapped_name] = count
+        else:
+            # Keep original name if no mapping exists
+            fylke_dict[fylke_name] = count
+    
+    # Create a choropleth map with orange color scheme
+    choropleth = folium.Choropleth(
+        geo_data='static/data/norway_fylker_kartverket_wgs84.geojson',
         name='choropleth',
         data=fylke_dict,
         key_on='feature.properties.name',
-        fill_color='YlOrRd',
+        fill_color='OrRd',  # Orange-Red color scheme
         fill_opacity=0.7,
         line_opacity=0.2,
         legend_name='Antall faste givere',
         highlight=True
     ).add_to(m)
     
-    # Add tooltips
+    # Create a new GeoJson layer with custom tooltips showing both fylke name and donor count
+    # First, prepare the GeoJSON data with donor counts
+    import json
+    with open('static/data/norway_fylker_kartverket_wgs84.geojson', 'r') as f:
+        geojson_data = json.load(f)
+    
+    # Add donor counts to GeoJSON properties for tooltips
+    for feature in geojson_data['features']:
+        fylke_name = feature['properties']['name']
+        
+        # Check if this fylke has donors in our database
+        donor_count = 0
+        if fylke_name in fylke_dict:
+            donor_count = fylke_dict[fylke_name]
+        elif fylke_name in fylke_mapping and fylke_mapping[fylke_name] in fylke_dict:
+            # Try to find a match using the mapping
+            donor_count = fylke_dict[fylke_mapping[fylke_name]]
+        else:
+            # Try to find a match by checking if this fylke name is a key in the mapping
+            for db_name, mapped_name in fylke_mapping.items():
+                if mapped_name == fylke_name and db_name in fylke_dict:
+                    donor_count += fylke_dict[db_name]
+        
+        # Add donor count to properties for tooltip display
+        feature['properties']['donor_count'] = donor_count
+    
+    # Save the modified GeoJSON with donor counts
+    with open('static/data/norway_fylker_with_counts.geojson', 'w') as f:
+        json.dump(geojson_data, f)
+    
+    # Create a new GeoJson layer with tooltips showing both fylke name and donor count
+    tooltip_layer = folium.GeoJson(
+        'static/data/norway_fylker_with_counts.geojson',
+        name='tooltips',
+        style_function=lambda x: {
+            'fillColor': 'transparent',
+            'color': 'transparent',
+            'fillOpacity': 0.0,
+            'weight': 0.0
+        },
+        tooltip=folium.GeoJsonTooltip(
+            fields=['name', 'donor_count'],
+            aliases=['Fylke:', 'Antall givere:'],
+            style=('background-color: white; color: #333333; font-family: arial; font-size: 12px; padding: 10px;')
+        )
+    ).add_to(m)
+    
+    # Add layer control
     folium.LayerControl().add_to(m)
     
     # Create a bar chart for top 5 fylker

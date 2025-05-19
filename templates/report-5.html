@@ -365,8 +365,8 @@
         </div>
         
         <div class="value-container animate__animated animate__fadeIn">
-            <div class="value-title">Årlig verdi av dagens nye givere</div>
-            <div class="value-amount" id="yearlyValueNewDonors">--</div>
+            <div class="value-title">Årlig verdi av alle givere i 2025</div>
+            <div class="value-amount" id="yearlyValueAllDonors">--</div>
             <div class="value-description">
                 Disse midlene vil hjelpe oss å nå ut til flere mennesker som trenger støtte og omsorg.
             </div>
@@ -408,26 +408,36 @@
                     const donorCount = data.count;
                     const yearlyValue = data.yearly_value;
                     const last14Days = data.last_14_days;
+                    const totalYearlyAmount = data.total_yearly_amount;
+                    const donorsThisYearCount = data.donors_this_year_count;
                     
                     // Update the UI
                     document.getElementById('newDonorsToday').textContent = donorCount;
-                    document.getElementById('yearlyValueNewDonors').textContent = yearlyValue.toLocaleString('no-NO') + ' kr';
+                    document.getElementById('yearlyValueAllDonors').textContent = totalYearlyAmount.toLocaleString('no-NO') + ' kr';
                     
                     // Create hearts based on the number of new donors
                     createHearts(donorCount);
                     
                     // Render the graph with the last 14 days data
                     renderGraph(last14Days);
+                    
+                    // Log the data for debugging
+                    console.log('API Data:', {
+                        donorCount,
+                        yearlyValue,
+                        totalYearlyAmount,
+                        donorsThisYearCount
+                    });
                 })
                 .catch(error => {
                     console.error('Error fetching data:', error);
                     
                     // If there's an error, show placeholder data
                     const placeholderDonors = Math.floor(Math.random() * 35) + 15;
-                    const placeholderYearlyValue = placeholderDonors * 720; // Assuming average annual value of 720 per donor
+                    const placeholderYearlyValue = placeholderDonors * 12000; // Assuming average annual value of 12000 per donor
                     
                     document.getElementById('newDonorsToday').textContent = placeholderDonors;
-                    document.getElementById('yearlyValueNewDonors').textContent = placeholderYearlyValue.toLocaleString('no-NO') + ' kr';
+                    document.getElementById('yearlyValueAllDonors').textContent = placeholderYearlyValue.toLocaleString('no-NO') + ' kr';
                     
                     // Create hearts based on the placeholder number
                     createHearts(placeholderDonors);

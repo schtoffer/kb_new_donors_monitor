@@ -1097,13 +1097,36 @@ def get_new_donors_today():
     # Reverse the data so it's in chronological order (oldest to newest)
     historical_data.reverse()
     
+    # Calculate total value of all donors in the current year
+    current_year = today.year
+    start_of_year = datetime(current_year, 1, 1).date()
+    start_of_year_str = start_of_year.strftime('%d.%m.%Y')
+    
+    # Instead of filtering by date, get all donors to match the recurring_donors route logic
+    all_donors = RecurringDonor.query.all()
+    
+    # Filter to only include MI and FG product types
+    filtered_donors = [donor for donor in all_donors 
+                      if hasattr(donor, 'produkttype') and donor.produkttype in ['MI', 'FG'] or 
+                         hasattr(donor, 'producttype_id') and donor.producttype_id in ['MI', 'FG']]
+    
+    # Calculate total amount for all donors (matching the recurring_donors route logic)
+    total_yearly_amount = sum(donor.amount if donor.amount is not None else 0 for donor in filtered_donors)
+    
+    # Also calculate the number of donors this year for the API response
+    current_year_donors = [donor for donor in filtered_donors 
+                          if (donor.startdate and donor.startdate.year == current_year) or
+                             (donor.startdato and donor.startdato.endswith(str(current_year)))]
+    
     return jsonify({
         'count': len(new_donors_today),
         'yearly_value': yearly_value,
         'average_new_donors_last_30_days': average_new_donors,
         'payment_methods': payment_methods,
         'products': products,
-        'last_14_days': historical_data
+        'last_14_days': historical_data,
+        'total_yearly_amount': total_yearly_amount,
+        'donors_this_year_count': len(current_year_donors)
     })
 
 # Create database tables if they don't exist

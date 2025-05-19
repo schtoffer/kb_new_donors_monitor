@@ -15,17 +15,31 @@
             --background-color: rgb(236, 230, 233); /* Lighter background color */
         }
         
+        /* Logo styles */
+        .logo {
+            position: fixed;
+            top: 0;
+            left: 0;
+            z-index: 1001;
+            height: 60px;
+            width: auto;
+            margin: 0 0 0 8px;
+            padding: 0;
+            display: block;
+            border: none;
+        }
+        
         /* Hamburger menu styles */
         .header {
             position: fixed;
             top: 0;
             right: 0;
             width: 100%;
-            height: 40px;
+            height: 60px;
             padding: 0 10px;
             text-align: right;
             z-index: 1000;
-            background-color: var(--background-color);
+            background-color: transparent;
             display: flex;
             align-items: center;
             justify-content: flex-end;
@@ -36,6 +50,8 @@
             cursor: pointer;
             padding: 10px;
             position: relative;
+            background-color: rgba(236, 230, 233, 0.7);
+            border-radius: 5px;
         }
         
         .hamburger-line {
@@ -51,12 +67,14 @@
             display: none;
             position: absolute;
             right: 0;
-            background-color: var(--tertiary-color);
+            top: 45px;
+            background-color: rgba(255, 255, 255, 0.95);
             min-width: 160px;
             box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.2);
-            z-index: 1;
+            z-index: 1001;
             border-radius: 4px;
             overflow: hidden;
+            border: 1px solid #ddd;
         }
         
         .dropdown-content a {
@@ -99,7 +117,7 @@
             width: 100%;
             max-width: 100%;
             margin: 0;
-            margin-top: 40px; /* Add space for the header */
+            margin-top: 60px; /* Add space for the larger logo */
         }
         
         /* End of common styles */
@@ -107,6 +125,7 @@
     {% block additional_styles %}{% endblock %}
 </head>
 <body>
+    <img src="/static/images/kb_logo.svg" alt="Kirkens Bymisjon" class="logo">
     <div class="header">
         <div class="hamburger" onclick="toggleMenu()">
             <div class="hamburger-line"></div>

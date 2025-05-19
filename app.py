@@ -15,7 +15,7 @@ import logging
 # Configure logging
 logging.basicConfig(level=logging.INFO)
 
-app = Flask(__name__, instance_relative_config=True)
+app = Flask(__name__, instance_relative_config=True, static_folder='static', static_url_path='/static')
 # Make sure the instance folder exists
 os.makedirs(app.instance_path, exist_ok=True)
 # Use absolute path for SQLite database

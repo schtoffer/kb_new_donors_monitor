@@ -11,6 +11,9 @@ import secrets
 import hashlib
 import json
 import logging
+import folium
+import sqlite3
+import json
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -198,6 +201,51 @@ API_KEY = os.environ.get('VENDOR_API_KEY', 'test_api_key_123')
 @app.route('/')
 def index():
     return render_template('report-5.html')
+
+@app.route('/kart')
+def kart():
+    # Get donor counts by fylke
+    conn = sqlite3.connect(db_path)
+    cursor = conn.cursor()
+    cursor.execute("""
+        SELECT fylke, COUNT(*) as count 
+        FROM recurring_donor 
+        WHERE fylke IS NOT NULL AND fylke != '' 
+        GROUP BY fylke 
+        ORDER BY count DESC
+    """)
+    fylke_data = cursor.fetchall()
+    conn.close()
+    
+    # Create a map centered on Norway
+    m = folium.Map(location=[62.0, 10.0], zoom_start=5, tiles='CartoDB positron')
+    
+    # Convert data to a format suitable for Folium
+    fylke_dict = {row[0]: row[1] for row in fylke_data}
+    
+    # Create a choropleth map
+    folium.Choropleth(
+        geo_data='static/data/norway_counties.geojson',
+        name='choropleth',
+        data=fylke_dict,
+        key_on='feature.properties.name',
+        fill_color='YlOrRd',
+        fill_opacity=0.7,
+        line_opacity=0.2,
+        legend_name='Antall faste givere',
+        highlight=True
+    ).add_to(m)
+    
+    # Add tooltips
+    folium.LayerControl().add_to(m)
+    
+    # Create a bar chart for top 5 fylker
+    top_fylker = fylke_data[:5]
+    
+    # Save the map to an HTML file
+    map_html = m._repr_html_()
+    
+    return render_template('kart.html', map_html=map_html, fylke_data=fylke_data, top_fylker=top_fylker)
 
 @app.route('/import')
 def import_page():

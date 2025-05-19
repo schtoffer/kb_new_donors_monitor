@@ -118,6 +118,28 @@
     .payment-method.Avtalegiro {
         background-color: #6c757d; /* Gray for Avtalegiro */
     }
+    
+    .payment-method-link {
+        text-decoration: none;
+        display: inline-block;
+    }
+    
+    .payment-method-link:hover .payment-method {
+        opacity: 0.9;
+        transform: scale(1.05);
+        transition: all 0.2s ease;
+    }
+    
+    .donor-link {
+        color: #0066cc;
+        text-decoration: none;
+        font-weight: 500;
+    }
+    
+    .donor-link:hover {
+        text-decoration: underline;
+        color: #004c99;
+    }
 </style>
 {% endblock %}
 
@@ -161,25 +183,31 @@
     <table class="donors-table">
         <thead>
             <tr>
-                <th>Navn ID</th>
                 <th>Betalingsmåte</th>
                 <th>Beløp</th>
                 <th>Startdato</th>
                 <th>Produkt</th>
+                <th>Avtale</th>
             </tr>
         </thead>
         <tbody>
             {% for donor in donors %}
             <tr>
-                <td>{{ donor.name_id }}</td>
                 <td>
-                    <span class="payment-method {{ donor.payment_method }}">
-                        {{ donor.payment_method }}
-                    </span>
+                    <a href="https://bymisjon.profundo.no/crm/navn/{{ donor.name_id }}/avtale/{{ donor.agreement_number }}" target="_blank" class="payment-method-link" title="Åpne i Profundo">
+                        <span class="payment-method {{ donor.payment_method }}">
+                            {{ donor.payment_method }} ↗
+                        </span>
+                    </a>
                 </td>
                 <td><span style="white-space: nowrap;">{{ donor.amount|int }} kr</span></td>
                 <td>{{ donor.startdate }}</td>
                 <td>{{ donor.producttype_id }}</td>
+                <td>
+                    <a href="https://bymisjon.profundo.no/crm/navn/{{ donor.name_id }}/avtale/{{ donor.agreement_number }}" target="_blank" class="donor-link" title="Åpne avtale i Profundo">
+                        {{ donor.agreement_number }}
+                    </a>
+                </td>
             </tr>
             {% endfor %}
         </tbody>
@@ -209,8 +237,8 @@
             var toDate = $('#date-filter-to').val();
             
             $('.donors-table tbody tr').each(function() {
-                var productCell = $(this).find('td:eq(4)').text().trim();
-                var dateCell = $(this).find('td:eq(3)').text().trim();
+                var productCell = $(this).find('td:eq(3)').text().trim();
+                var dateCell = $(this).find('td:eq(2)').text().trim();
                 var dateMatch = true;
                 
                 // Process date filtering

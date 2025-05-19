@@ -53,6 +53,7 @@ def convert_column_name_to_field_name(column_name):
         'Navnenr': 'navnenr',
         'Register': 'register',
         'Register.1': 'register_1',
+        'Avtalenummer': 'avtalenummer',
         'Postnummer': 'postnummer',
         'Poststed': 'poststed',
         'Kommune': 'kommune',
@@ -103,7 +104,7 @@ def populate_from_excel(excel_file, clear_db=False):
     
     # Define the allowed columns we want to import
     allowed_columns = [
-        'Navnenr', 'Register', 'Register.1', 'Postnummer', 'Poststed', 
+        'Navnenr', 'Register', 'Register.1', 'Avtalenummer', 'Postnummer', 'Poststed', 
         'Kommune', 'Fylke', 'Landkode', 'Land', 'Navnetype', 'Fødselsår/startår',
         'Produktkode', 'Produkttype', 'Prosjektnummer', 'Produkt', 'Prosjektnavn',
         'Startdato', 'Betalingsmåte', 'Girorytme', 'Betalingsrytme', 'Beløp',
@@ -115,6 +116,12 @@ def populate_from_excel(excel_file, clear_db=False):
     filtered_columns = [col for col in df.columns if col in allowed_columns]
     df_filtered = df[filtered_columns]
     
+    # Filter to only include rows where Produkttype is MI or FG
+    if 'Produkttype' in df_filtered.columns:
+        print(f"Before filtering by Produkttype: {len(df_filtered)} records")
+        df_filtered = df_filtered[df_filtered['Produkttype'].isin(['MI', 'FG'])]
+        print(f"After filtering by Produkttype: {len(df_filtered)} records")
+    
     # Create a mapping from Excel column names to database field names
     field_mapping = {}
     for column in filtered_columns:
@@ -125,6 +132,7 @@ def populate_from_excel(excel_file, clear_db=False):
     # Map legacy fields for backward compatibility
     legacy_field_mapping = {
         'Navnenr': 'name_id',
+        'Avtalenummer': 'agreement_number',
         'Postnummer': 'zip_code',
         'Landkode': 'country_id',
         'Navnetype': 'nametype_id',
@@ -211,22 +219,29 @@ def populate_from_excel(excel_file, clear_db=False):
             if 'classification_id_success' not in donor_data or donor_data['classification_id_success'] is None:
                 donor_data['classification_id_success'] = 'S1'
             
-            # Create and add the new donor
-            try:
-                new_donor = RecurringDonor(**donor_data)
-                db.session.add(new_donor)
-                added += 1
-                
-                # Commit every 100 records to avoid large transactions
-                if added % 100 == 0:
-                    db.session.commit()
-                    print(f"Committed {added} records so far...")
-            
-            except Exception as e:
-                print(f"Error adding donor (record {processed}): {e}")
-                print(f"Problematic data: {donor_data}")
-                db.session.rollback()
+            # Only add the donor if Produkttype is MI or FG
+            produkttype = donor_data.get('produkttype')
+            if produkttype in ['MI', 'FG']:
+                try:
+                    new_donor = RecurringDonor(**donor_data)
+                    db.session.add(new_donor)
+                    added += 1
+                    
+                    # Commit every 100 records to avoid large transactions
+                    if added % 100 == 0:
+                        db.session.commit()
+                        print(f"Committed {added} records so far...")
+                except Exception as e:
+                    print(f"Error adding donor (record {processed}): {e}")
+                    print(f"Problematic data: {donor_data}")
+                    db.session.rollback()
+                    skipped += 1
+            else:
                 skipped += 1
+                if produkttype:
+                    print(f"Skipped record {processed} with Produkttype: {produkttype}")
+                else:
+                    print(f"Skipped record {processed} with missing Produkttype")
         
         # Final commit for any remaining records
         try:

@@ -265,17 +265,33 @@ def kart():
             # Keep original name if no mapping exists
             fylke_dict[fylke_name] = count
     
-    # Create a choropleth map with orange color scheme
+    # Get the minimum and maximum donor counts
+    min_donors = min(fylke_dict.values()) if fylke_dict else 0
+    max_donors = max(fylke_dict.values()) if fylke_dict else 0
+    
+    # Create a custom threshold scale for the choropleth map
+    # This will use white for 0 and gradually increase to dark orange
+    if max_donors > 0:
+        # Calculate the step size for the threshold scale
+        step = max_donors / 8 if max_donors > 8 else 1
+        # Create a threshold scale with white for 0
+        threshold_scale = [0, step, step*2, step*3, step*4, step*5, step*6, step*7, max_donors]
+    else:
+        # If there are no donors, use a default scale
+        threshold_scale = [0, 1, 2, 3, 4, 5, 6, 7, 8]
+    
+    # Create a choropleth map with custom color scheme
     choropleth = folium.Choropleth(
         geo_data='static/data/norway_fylker_kartverket_wgs84.geojson',
         name='choropleth',
         data=fylke_dict,
         key_on='feature.properties.name',
-        fill_color='OrRd',  # Orange-Red color scheme
+        fill_color='YlOrBr',  # Yellow-Orange-Brown color scheme
         fill_opacity=0.7,
         line_opacity=0.2,
         legend_name='Antall faste givere',
-        highlight=True
+        highlight=True,
+        threshold_scale=threshold_scale
     ).add_to(m)
     
     # Create a new GeoJson layer with custom tooltips showing both fylke name and donor count

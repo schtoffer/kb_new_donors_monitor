@@ -1,0 +1,193 @@
+{% extends "layout.html" %}
+
+{% block title %}Regioner - KB FG Monitor{% endblock %}
+
+{% block content %}
+<div class="content-wrapper">
+    <h1 class="page-title">Faste givere etter region</h1>
+    
+    <div class="summary-box">
+        <div class="summary-stat">
+            <div class="summary-value">{{ total_donors }}</div>
+            <div class="summary-label">Totalt antall givere</div>
+        </div>
+        <div class="summary-stat">
+            <div class="summary-value">{{ total_amount|int }} kr</div>
+            <div class="summary-label">Månedlig verdi</div>
+        </div>
+        <div class="summary-stat">
+            <div class="summary-value">{{ total_yearly_amount|int }} kr</div>
+            <div class="summary-label">Årlig verdi</div>
+        </div>
+    </div>
+    
+    <div class="table-container">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Region</th>
+                    <th>Antall givere</th>
+                    <th>Månedlig verdi</th>
+                    <th>Årlig verdi</th>
+                    <th>Gjennomsnitt per giver</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for project in project_data %}
+                <tr>
+                    <td>{{ project.name }}</td>
+                    <td>{{ project.count }}</td>
+                    <td>{{ project.amount|int }} kr</td>
+                    <td>{{ project.yearly_amount|int }} kr</td>
+                    <td>{{ (project.amount / project.count)|int if project.count > 0 else 0 }} kr</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    
+    <div class="chart-container">
+        <div class="chart-title">Fordeling av givere etter region</div>
+        <canvas id="regionChart"></canvas>
+    </div>
+</div>
+
+<style>
+    .content-wrapper {
+        padding: 20px;
+        margin-top: 60px;
+    }
+    
+    .page-title {
+        color: var(--primary-color);
+        margin-bottom: 20px;
+        font-size: 24px;
+        font-weight: bold;
+    }
+    
+    .summary-box {
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 30px;
+        background-color: white;
+        border-radius: 8px;
+        padding: 15px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    
+    .summary-stat {
+        text-align: center;
+        flex: 1;
+    }
+    
+    .summary-value {
+        font-size: 24px;
+        font-weight: bold;
+        color: var(--primary-color);
+    }
+    
+    .summary-label {
+        font-size: 14px;
+        color: #666;
+        margin-top: 5px;
+    }
+    
+    .table-container {
+        background-color: white;
+        border-radius: 8px;
+        padding: 15px;
+        margin-bottom: 30px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        overflow-x: auto;
+    }
+    
+    .data-table {
+        width: 100%;
+        border-collapse: collapse;
+    }
+    
+    .data-table th, .data-table td {
+        padding: 12px 15px;
+        text-align: left;
+        border-bottom: 1px solid #ddd;
+    }
+    
+    .data-table th {
+        background-color: #f8f8f8;
+        font-weight: bold;
+        color: #333;
+    }
+    
+    .data-table tr:hover {
+        background-color: #f5f5f5;
+    }
+    
+    .chart-container {
+        background-color: white;
+        border-radius: 8px;
+        padding: 15px;
+        margin-bottom: 30px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        height: 400px;
+    }
+    
+    .chart-title {
+        font-size: 18px;
+        font-weight: bold;
+        margin-bottom: 15px;
+        color: #333;
+    }
+</style>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<!-- Store data in a hidden div to avoid template syntax in JavaScript -->
+<div id="project-data" style="display: none;" data-projects='{{ project_data|tojson }}'></div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Get the data from the hidden div
+        const projectDataElement = document.getElementById('project-data');
+        const projectData = JSON.parse(projectDataElement.getAttribute('data-projects'));
+        
+        // Only use the top 10 regions for the chart to avoid overcrowding
+        const topProjects = projectData.slice(0, 10);
+        
+        // Create the chart
+        const ctx = document.getElementById('regionChart').getContext('2d');
+        new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: topProjects.map(function(p) { return p.name; }),
+                datasets: [
+                    {
+                        label: 'Antall givere',
+                        data: topProjects.map(function(p) { return p.count; }),
+                        backgroundColor: '#FC4C02',
+                        borderColor: '#FC4C02',
+                        borderWidth: 1
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        title: {
+                            display: true,
+                            text: 'Antall givere'
+                        }
+                    },
+                    x: {
+                        title: {
+                            display: true,
+                            text: 'Region'
+                        }
+                    }
+                }
+            }
+        });
+    });
+</script>
+{% endblock %}

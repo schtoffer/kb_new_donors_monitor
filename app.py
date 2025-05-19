@@ -202,6 +202,56 @@ API_KEY = os.environ.get('VENDOR_API_KEY', 'test_api_key_123')
 def index():
     return render_template('report-5.html')
 
+@app.route('/region')
+def region():
+    # Get donor counts by project name (prosjektnavn)
+    conn = sqlite3.connect(db_path)
+    cursor = conn.cursor()
+    cursor.execute("""
+        SELECT prosjektnavn, COUNT(*) as count, SUM(belop) as total_amount 
+        FROM recurring_donor 
+        WHERE prosjektnavn IS NOT NULL AND prosjektnavn != '' 
+        GROUP BY prosjektnavn 
+        ORDER BY count DESC
+    """)
+    project_data = cursor.fetchall()
+    conn.close()
+    
+    # Process the project data
+    processed_data = []
+    total_donors = 0
+    total_amount = 0
+    
+    for row in project_data:
+        project_name = row[0]
+        count = row[1]
+        amount = row[2] if row[2] is not None else 0
+        
+        # Rename specific projects as requested
+        if project_name == 'Troms og Finnmark - frie midler':
+            project_name = 'Troms og Finnmark'
+        elif project_name == 'Bodø - frie midler':
+            project_name = 'Bodø'
+        
+        processed_data.append({
+            'name': project_name,
+            'count': count,
+            'amount': amount,
+            'yearly_amount': amount * 12  # Calculate yearly amount
+        })
+        
+        total_donors += count
+        total_amount += amount
+    
+    # Sort the data by donor count (descending)
+    processed_data.sort(key=lambda x: x['count'], reverse=True)
+    
+    return render_template('region.html', 
+                           project_data=processed_data, 
+                           total_donors=total_donors,
+                           total_amount=total_amount,
+                           total_yearly_amount=total_amount * 12)
+
 @app.route('/kart')
 def kart():
     # Get donor counts by fylke

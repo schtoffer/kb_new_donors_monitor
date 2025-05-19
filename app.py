@@ -473,17 +473,6 @@ def process_excel_file(filepath):
         "details": details[:20]  # Limit details to avoid too large response
     }
 
-@app.route('/alternative-2')
-def alternative_2():
-    return render_template('report-2.html')
-
-@app.route('/alternative-3')
-def alternative_3():
-    return render_template('report-3.html')
-
-@app.route('/report-4')
-def report_4():
-    return render_template('report-4.html')
 
 @app.route('/report-5')
 def report_5():

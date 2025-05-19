@@ -183,18 +183,17 @@
     <table class="donors-table">
         <thead>
             <tr>
-                <th>Betalingsmåte</th>
-                <th>Beløp</th>
+                <th>Avtale</th>
+                <th>Årsbeløp</th>
                 <th>Startdato</th>
                 <th>Produkt</th>
-                <th>Avtale</th>
             </tr>
         </thead>
         <tbody>
             {% for donor in donors %}
             <tr>
                 <td>
-                    <a href="https://bymisjon.profundo.no/crm/navn/{{ donor.name_id }}/avtale/{{ donor.agreement_number }}" target="_blank" class="payment-method-link" title="Åpne i Profundo">
+                    <a href="https://bymisjon.profundo.no/crm/navn/{{ donor.name_id }}/avtale/{{ donor.agreement_number }}" target="_blank" class="payment-method-link" title="Åpne avtale i Profundo">
                         <span class="payment-method {{ donor.payment_method }}">
                             {{ donor.payment_method }} ↗
                         </span>
@@ -203,11 +202,6 @@
                 <td><span style="white-space: nowrap;">{{ donor.amount|int }} kr</span></td>
                 <td>{{ donor.startdate }}</td>
                 <td>{{ donor.producttype_id }}</td>
-                <td>
-                    <a href="https://bymisjon.profundo.no/crm/navn/{{ donor.name_id }}/avtale/{{ donor.agreement_number }}" target="_blank" class="donor-link" title="Åpne avtale i Profundo">
-                        {{ donor.agreement_number }}
-                    </a>
-                </td>
             </tr>
             {% endfor %}
         </tbody>

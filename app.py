@@ -556,18 +556,12 @@ def get_new_donors_today():
             print(f"Found {len(recent_donors)} donors for date {recent_date_str}")
             break
     
-    # If no donors found in the last 7 days, use a default date (May 7, 2025)
+    # If no donors found in the last 7 days, use today's date but with empty donors list
     if not recent_donors:
-        default_date = datetime(2025, 5, 7).date()
-        default_date_str = default_date.strftime('%d.%m.%Y')
-        
-        date_donors = RecurringDonor.query.filter_by(startdate=default_date).all()
-        string_donors = RecurringDonor.query.filter_by(startdato=default_date_str).all()
-        
-        recent_donors = list(set(date_donors + string_donors))
-        recent_date = default_date
-        recent_date_str = default_date_str
-        print(f"Using default date {default_date_str} with {len(recent_donors)} donors")
+        recent_date = today
+        recent_date_str = today.strftime('%d.%m.%Y')
+        recent_donors = []
+        print(f"No donors found in the last 7 days. Using today's date with 0 donors.")
     
     # Use the recent donors as our "today's" donors
     new_donors_today = recent_donors
@@ -619,16 +613,16 @@ def get_new_donors_today():
     average_new_donors = round(sum(last_30_days_counts) / len(last_30_days_counts)) if last_30_days_counts else 0
     
     # Get historical data for the last 14 days
-    # Use the recent date as reference
-    if recent_date:
-        reference_date = recent_date
-    else:
-        reference_date = today
+    # Use today's date as reference for the graph
+    reference_date = today
+    print(f"Debug - Today's date: {today}, Reference date for graph: {reference_date}")
         
     historical_data = []
+    print(f"Debug - Date range for graph:")
     for i in range(14, -1, -1):
         date = reference_date - timedelta(days=i)
         date_str = date.strftime('%d.%m.%Y')
+        print(f"Debug - Processing date: {date_str} ({i} days before reference date)")
         
         # Get donors with matching date field
         date_donors = RecurringDonor.query.filter_by(startdate=date).all()
@@ -636,13 +630,34 @@ def get_new_donors_today():
         # Get donors with matching string date field
         string_donors = RecurringDonor.query.filter_by(startdato=date_str).all()
         
-        # Combine both sets of donors, ensuring no duplicates
-        donors_on_date = list(set(date_donors + string_donors))
+        # Combine donors from both date formats and remove duplicates based on name_id
+        all_donors = date_donors + string_donors
+        
+        # Create a dictionary with name_id as key to remove duplicates
+        unique_donors_dict = {}
+        for donor in all_donors:
+            if donor.name_id not in unique_donors_dict:
+                unique_donors_dict[donor.name_id] = donor
+        
+        # Convert back to list
+        donors_on_date = list(unique_donors_dict.values())
+        
+        # Debug output for May 17, 2025
+        if date_str == '17.05.2025':
+            print(f"Debug - May 17, 2025 - Date donors: {len(date_donors)}, String donors: {len(string_donors)}, Raw combined: {len(all_donors)}, After deduplication: {len(donors_on_date)}")
+            print(f"Debug - May 17, 2025 - Date format: {date}, String format: {date_str}")
         
         # Filter to only include MI and FG product types
         donors_on_date = [donor for donor in donors_on_date 
                           if hasattr(donor, 'produkttype') and donor.produkttype in ['MI', 'FG'] or 
                              hasattr(donor, 'producttype_id') and donor.producttype_id in ['MI', 'FG']]
+        
+        # More debug for May 17, 2025
+        if date_str == '17.05.2025':
+            print(f"Debug - May 17, 2025 - After filtering: {len(donors_on_date)}")
+            # Check for duplicates in another way
+            name_ids = [donor.name_id for donor in donors_on_date if donor.name_id is not None]
+            print(f"Debug - May 17, 2025 - Unique name_ids: {len(set(name_ids))}, Total name_ids: {len(name_ids)}")
         
         # Calculate daily value - ensure amount is available
         daily_value = sum(donor.amount for donor in donors_on_date if donor.amount is not None)

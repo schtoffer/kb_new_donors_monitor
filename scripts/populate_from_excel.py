@@ -195,6 +195,9 @@ def populate_from_excel(excel_file, clear_db=False):
                             date_str = str(value)
                             if '.' in date_str:
                                 donor_data[legacy_field] = datetime.strptime(date_str, '%d.%m.%Y').date()
+                                # Store the date only in the date object format, not as a string
+                                if 'startdato' in donor_data:
+                                    donor_data.pop('startdato')
                             else:
                                 donor_data[legacy_field] = datetime.strptime(date_str, '%Y-%m-%d').date()
                         except (ValueError, TypeError):

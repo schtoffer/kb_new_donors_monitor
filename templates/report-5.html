@@ -213,13 +213,13 @@
     }
     
     .graph {
-        height: 180px;
+        position: relative;
+        height: 200px;
         display: flex;
         align-items: flex-end;
         justify-content: space-between;
-        padding: 10px 0;
-        margin: 10px 0;
-        position: relative;
+        margin: 20px 0;
+        padding-bottom: 30px;
     }
     
     .graph::after {
@@ -246,16 +246,6 @@
         background-color: var(--primary-color);
     }
     
-    .graph-bar-label {
-        position: absolute;
-        bottom: -20px;
-        left: 50%;
-        transform: translateX(-50%);
-        font-size: 10px;
-        color: #666;
-        white-space: nowrap;
-    }
-    
     .graph-bar-value {
         position: absolute;
         top: -20px;
@@ -264,6 +254,16 @@
         font-size: 12px;
         font-weight: bold;
         color: #333;
+    }
+    
+    .graph-date-label {
+        position: absolute;
+        bottom: -25px;
+        left: 50%;
+        transform: translateX(-50%);
+        font-size: 9px;
+        color: #666;
+        white-space: nowrap;
     }
     
     .graph-loading {
@@ -346,12 +346,11 @@
 
 {% block content %}
     <div class="container">
-        <h1>Hjerteslag</h1>
         
         <div class="impact-container">
             <div class="impact-number" id="newDonorsToday">--</div>
             <div class="impact-text">
-                nye hjerter slår for et varmere samfunn i dag
+                nye faste givere i dag
             </div>
             
             <div id="hearts-container" class="hearts-container">
@@ -470,13 +469,20 @@
             // Find the maximum value for scaling
             const maxValue = Math.max(...data.map(item => item.count));
             
+            // Reverse the data array so the most recent date (May 19) is on the right
+            // The API already returns data in chronological order (oldest to newest)
+            // but we want to display with newest on the right
+            const reversedData = [...data].reverse();
+            
             // Create a bar for each day
-            data.forEach((dayData, index) => {
+            reversedData.forEach((dayData, index) => {
                 const bar = document.createElement('div');
                 bar.className = 'graph-bar';
                 
                 // Mark today's bar with a different color
-                if (index === data.length - 1) {
+                // After reversing, today (May 19) is at index 0
+                // We need to check the date to ensure we're highlighting the correct bar
+                if (dayData.date === '19.05') {
                     bar.classList.add('today');
                 }
                 
@@ -493,6 +499,12 @@
                     valueLabel.textContent = dayData.count;
                     bar.appendChild(valueLabel);
                 }
+                
+                // Add date label to the x-axis
+                const dateLabel = document.createElement('div');
+                dateLabel.className = 'graph-date-label';
+                dateLabel.textContent = dayData.date;
+                bar.appendChild(dateLabel);
                 
                 graphContainer.appendChild(bar);
             });

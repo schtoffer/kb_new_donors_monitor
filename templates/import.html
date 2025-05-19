@@ -1,6 +1,6 @@
 {% extends "layout.html" %}
 
-{% block title %}Import Excel Data{% endblock %}
+{% block title %}Importer Excel-data{% endblock %}
 
 {% block additional_styles %}
 <style>
@@ -150,19 +150,19 @@
 
 {% block content %}
 <div class="import-container">
-    <h1>Import Excel Data</h1>
-    <p>Drag and drop your Excel file or click to select</p>
+    <h1>Importer Excel-data</h1>
+    <p>Dra og slipp Excel-filen din eller klikk for å velge</p>
     
     <div id="dropArea" class="drop-area">
         <i class="fa fa-file-excel-o"></i>
-        <p>Drag & Drop Excel File Here</p>
-        <p>or</p>
+        <p>Dra og slipp Excel-filen her</p>
+        <p>eller</p>
         <input type="file" id="fileInput" accept=".xlsx,.xls" style="display: none;">
-        <button id="browseBtn" class="import-btn" style="display: inline-block;">Browse Files</button>
+        <button id="browseBtn" class="import-btn" style="display: inline-block;">Bla gjennom filer</button>
     </div>
     
     <div id="fileInfo" class="file-info">
-        <h3>Selected File:</h3>
+        <h3>Valgt fil:</h3>
         <p id="fileName"></p>
         <p id="fileSize"></p>
     </div>
@@ -176,13 +176,13 @@
     
     <button id="importBtn" class="import-btn">
         <span id="importSpinner" class="spinner" style="display: none;"></span>
-        Import Data
+        Importer data
     </button>
     
     <div id="statusMessage" class="status-message"></div>
     
     <div id="importResults" class="import-results">
-        <h3>Import Results:</h3>
+        <h3>Importresultater:</h3>
         <ul id="resultsList"></ul>
     </div>
 </div>
@@ -270,13 +270,13 @@
                 const fileType = selectedFile.type || '.' + selectedFile.name.split('.').pop();
                 
                 if (!validTypes.includes(fileType)) {
-                    showStatus('Please select a valid Excel file (.xlsx or .xls)', 'error');
+                    showStatus('Vennligst velg en gyldig Excel-fil (.xlsx eller .xls)', 'error');
                     return;
                 }
                 
                 // Display file info
-                fileName.textContent = `Name: ${selectedFile.name}`;
-                fileSize.textContent = `Size: ${formatFileSize(selectedFile.size)}`;
+                fileName.textContent = `Navn: ${selectedFile.name}`;
+                fileSize.textContent = `Størrelse: ${formatFileSize(selectedFile.size)}`;
                 fileInfo.style.display = 'block';
                 importBtn.style.display = 'inline-block';
                 
@@ -299,7 +299,7 @@
         
         function startImport() {
             if (!selectedFile) {
-                showStatus('Please select a file first', 'error');
+                showStatus('Vennligst velg en fil først', 'error');
                 return;
             }
             
@@ -307,7 +307,7 @@
             progressContainer.style.display = 'block';
             importBtn.disabled = true;
             importSpinner.style.display = 'inline-block';
-            importBtn.textContent = ' Importing...';
+            importBtn.textContent = ' Importerer...';
             importBtn.prepend(importSpinner);
             
             // Create FormData and append file
@@ -331,7 +331,7 @@
             xhr.onload = function() {
                 importBtn.disabled = false;
                 importSpinner.style.display = 'none';
-                importBtn.textContent = 'Import Data';
+                importBtn.textContent = 'Importer data';
                 
                 if (xhr.status === 200) {
                     try {
@@ -341,13 +341,13 @@
                             showStatus(response.message, 'success');
                             displayResults(response.results);
                         } else {
-                            showStatus(response.message || 'Import failed', 'error');
+                            showStatus(response.message || 'Import mislyktes', 'error');
                         }
                     } catch (e) {
-                        showStatus('Error processing server response', 'error');
+                        showStatus('Feil ved behandling av serverrespons', 'error');
                     }
                 } else {
-                    showStatus('Error uploading file: ' + xhr.statusText, 'error');
+                    showStatus('Feil ved opplasting av fil: ' + xhr.statusText, 'error');
                 }
             };
             
@@ -355,8 +355,8 @@
             xhr.onerror = function() {
                 importBtn.disabled = false;
                 importSpinner.style.display = 'none';
-                importBtn.textContent = 'Import Data';
-                showStatus('Network error occurred', 'error');
+                importBtn.textContent = 'Importer data';
+                showStatus('Det oppstod en nettverksfeil', 'error');
             };
             
             xhr.send(formData);
@@ -375,13 +375,13 @@
             
             // Add summary
             const summaryItem = document.createElement('li');
-            summaryItem.innerHTML = `<strong>Summary:</strong> ${results.added} records added, ${results.updated} records updated, ${results.skipped} records skipped`;
+            summaryItem.innerHTML = `<strong>Sammendrag:</strong> ${results.added} poster lagt til, ${results.updated} poster oppdatert, ${results.skipped} poster hoppet over`;
             resultsList.appendChild(summaryItem);
             
             // Add details if available
             if (results.details && results.details.length > 0) {
                 const detailsHeader = document.createElement('li');
-                detailsHeader.innerHTML = '<strong>Details:</strong>';
+                detailsHeader.innerHTML = '<strong>Detaljer:</strong>';
                 resultsList.appendChild(detailsHeader);
                 
                 results.details.forEach(detail => {

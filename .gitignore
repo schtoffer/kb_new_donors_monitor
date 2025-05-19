@@ -56,3 +56,6 @@ instance/donors.db
 webapp_logs/
 *.zip
 *.log
+
+# Excel export files
+eksport*.xlsx

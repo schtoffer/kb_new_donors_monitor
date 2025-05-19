@@ -51,31 +51,56 @@ class RecurringDonor(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     
-    # Top level fields
-    campaign_id = db.Column(db.Integer, nullable=False)
-    payment_method = db.Column(db.String(50), nullable=False)
-    classification_id_success = db.Column(db.String(10), nullable=False)
+    # Fields from Excel (non-personal information only)
+    navnenr = db.Column(db.Integer, nullable=True)
+    register = db.Column(db.String(50), nullable=True)
+    register_1 = db.Column(db.String(255), nullable=True)
+    postnummer = db.Column(db.String(20), nullable=True)
+    poststed = db.Column(db.String(255), nullable=True)
+    kommune = db.Column(db.String(255), nullable=True)
+    fylke = db.Column(db.String(255), nullable=True)
+    landkode = db.Column(db.String(10), nullable=True)
+    land = db.Column(db.String(255), nullable=True)
+    navnetype = db.Column(db.String(10), nullable=True)
+    fodselsaar_startaar = db.Column(db.String(20), nullable=True)
+    produktkode = db.Column(db.String(50), nullable=True)
+    produkttype = db.Column(db.String(50), nullable=True)
+    prosjektnummer = db.Column(db.Integer, nullable=True)
+    produkt = db.Column(db.String(255), nullable=True)
+    prosjektnavn = db.Column(db.String(255), nullable=True)
+    startdato = db.Column(db.String(20), nullable=True)
+    betalingsmaate = db.Column(db.String(50), nullable=True)
+    girorytme = db.Column(db.Integer, nullable=True)
+    betalingsrytme = db.Column(db.String(50), nullable=True)
+    belop = db.Column(db.Float, nullable=True)
+    aksjonstype = db.Column(db.String(10), nullable=True)
+    aksjonstype_beskrivelse = db.Column(db.String(255), nullable=True)
+    aksjonsnummer = db.Column(db.String(20), nullable=True)
+    aksjonsnavn = db.Column(db.String(255), nullable=True)
+    avtaletype = db.Column(db.String(10), nullable=True)
+    periode_belop = db.Column(db.Float, nullable=True)
+    opprettet_dato = db.Column(db.String(20), nullable=True)
     
-    # Name fields
-    name_id = db.Column(db.Integer, nullable=False)
-    zip_code = db.Column(db.String(20), nullable=False)
-    country_id = db.Column(db.String(10), nullable=False)
-    nametype_id = db.Column(db.String(10), nullable=False)
+    # Legacy fields for backward compatibility
+    name_id = db.Column(db.Integer, nullable=True)
+    zip_code = db.Column(db.String(20), nullable=True)
+    country_id = db.Column(db.String(10), nullable=True)
+    nametype_id = db.Column(db.String(10), nullable=True)
+    producttype_id = db.Column(db.String(10), nullable=True)
+    project_id = db.Column(db.Integer, nullable=True)
+    amount = db.Column(db.Float, nullable=True)
+    interval = db.Column(db.String(20), nullable=True)
+    startdate = db.Column(db.Date, nullable=True)
+    payment_method = db.Column(db.String(50), nullable=True)
+    campaign_id = db.Column(db.Integer, nullable=True)
+    classification_id_success = db.Column(db.String(10), nullable=True)
     
-    # Agreement fields
-    agreement_number = db.Column(db.String(50), nullable=False)
-    producttype_id = db.Column(db.String(10), nullable=False)
-    project_id = db.Column(db.Integer, nullable=False)
-    productvariant_id = db.Column(db.Integer, nullable=True)
-    amount = db.Column(db.Float, nullable=False)
-    interval = db.Column(db.String(20), nullable=False)
-    startdate = db.Column(db.Date, nullable=False)
-    
-    # Define a unique constraint on name_id and agreement_number
-    __table_args__ = (db.UniqueConstraint('name_id', 'agreement_number', name='unique_name_agreement'),)
+    # No unique constraint needed
+    # __table_args__ = (db.UniqueConstraint('name_id', name='unique_name'),)
     
     def to_dict(self):
-        return {
+        # First include the original fields for backward compatibility
+        result = {
             'id': self.id,
             'created_at': self.created_at.isoformat() if self.created_at else None,
             'updated_at': self.updated_at.isoformat() if self.updated_at else None,
@@ -83,21 +108,57 @@ class RecurringDonor(db.Model):
             'payment_method': self.payment_method,
             'classification_id_success': self.classification_id_success,
             'name': {
-                'name_id': self.name_id,  # Already an integer in the database
+                'name_id': self.name_id,
                 'zip': self.zip_code,
                 'country_id': self.country_id,
                 'nametype_id': self.nametype_id
             },
+            'campaign': {
+                'aksjonsnummer': self.aksjonsnummer,
+                'aksjonsnavn': self.aksjonsnavn
+            },
             'agreement': {
-                'agreement_number': self.agreement_number,
                 'producttype_id': self.producttype_id,
                 'project_id': self.project_id,
-                'productvariant_id': self.productvariant_id,
                 'amount': self.amount,
                 'interval': self.interval,
                 'startdate': self.startdate.strftime('%d.%m.%Y') if self.startdate else None
             }
         }
+        
+        # Now add the selected Excel fields
+        result['excel_data'] = {
+            'navnenr': self.navnenr,
+            'register': self.register,
+            'register_1': self.register_1,
+            'postnummer': self.postnummer,
+            'poststed': self.poststed,
+            'kommune': self.kommune,
+            'fylke': self.fylke,
+            'landkode': self.landkode,
+            'land': self.land,
+            'navnetype': self.navnetype,
+            'fodselsaar_startaar': self.fodselsaar_startaar,
+            'produktkode': self.produktkode,
+            'produkttype': self.produkttype,
+            'prosjektnummer': self.prosjektnummer,
+            'produkt': self.produkt,
+            'prosjektnavn': self.prosjektnavn,
+            'startdato': self.startdato,
+            'betalingsmaate': self.betalingsmaate,
+            'girorytme': self.girorytme,
+            'betalingsrytme': self.betalingsrytme,
+            'belop': self.belop,
+            'aksjonstype': self.aksjonstype,
+            'aksjonstype_beskrivelse': self.aksjonstype_beskrivelse,
+            'aksjonsnummer': self.aksjonsnummer,
+            'aksjonsnavn': self.aksjonsnavn,
+            'avtaletype': self.avtaletype,
+            'periode_belop': self.periode_belop,
+            'opprettet_dato': self.opprettet_dato
+        }
+        
+        return result
 
     @classmethod
     def update_or_create(cls, date, n_new_donors, yearly_sum_new_donors, n_total_new_donors, yearly_sum_all_donors):
@@ -164,14 +225,13 @@ def recurring_donors():
         donor_info = {
             'name_id': donor.name_id,
             'payment_method': donor.payment_method,
-            'agreement_number': donor.agreement_number,
-            'amount': donor.amount,
+            'amount': donor.amount if donor.amount is not None else 0,
             'interval': donor.interval,
             'startdate': donor.startdate.strftime('%d.%m.%Y') if donor.startdate else '',
             'producttype_id': donor.producttype_id
         }
         donor_data.append(donor_info)
-        total_amount += donor.amount
+        total_amount += donor.amount if donor.amount is not None else 0
         
         # Add product to the unique products set
         if donor.producttype_id:
@@ -327,7 +387,7 @@ def new_recurring_donor():
     # Check required fields
     required_top_level = ['campaign_id', 'payment_method', 'classification_id_success', 'name', 'agreement']
     required_name = ['name_id', 'zip', 'country_id', 'nametype_id']
-    required_agreement = ['agreement_number', 'producttype_id', 'project_id', 'amount', 'interval', 'startdate']
+    required_agreement = ['producttype_id', 'project_id', 'amount', 'interval', 'startdate']
     
     # Validate top-level fields
     for field in required_top_level:
@@ -345,12 +405,11 @@ def new_recurring_donor():
             return jsonify({'error': f'Missing required agreement field: {field}'}), 400
     
     try:
-        # Check if a record with the same name_id and agreement_number already exists
+        # Check if a record with the same name_id already exists
         # Ensure name_id is treated as an integer
         name_id = int(data['name']['name_id'])
         existing_record = RecurringDonor.query.filter_by(
-            name_id=name_id,
-            agreement_number=data['agreement']['agreement_number']
+            name_id=name_id
         ).first()
         
         if existing_record:
@@ -367,7 +426,6 @@ def new_recurring_donor():
             # Update agreement information
             existing_record.producttype_id = data['agreement']['producttype_id']
             existing_record.project_id = data['agreement']['project_id']
-            existing_record.productvariant_id = data['agreement'].get('productvariant_id')
             existing_record.amount = data['agreement']['amount']
             existing_record.interval = data['agreement']['interval']
             # Parse startdate from string to date object
@@ -401,10 +459,8 @@ def new_recurring_donor():
                 nametype_id=data['name']['nametype_id'],
                 
                 # Agreement information
-                agreement_number=data['agreement']['agreement_number'],
                 producttype_id=data['agreement']['producttype_id'],
                 project_id=data['agreement']['project_id'],
-                productvariant_id=data['agreement'].get('productvariant_id'),
                 amount=data['agreement']['amount'],
                 interval=data['agreement']['interval'],
                 # Parse startdate from string to date object
@@ -473,8 +529,8 @@ def get_new_donors_today():
     # Find all donors that started today
     new_donors_today = RecurringDonor.query.filter_by(startdate=today).all()
     
-    # Calculate yearly value (amount * 12 for each donor)
-    yearly_value = sum(donor.amount * 12 for donor in new_donors_today)
+    # Calculate yearly value (amount * 12 for each donor) - ensure amount is available
+    yearly_value = sum(donor.amount * 12 for donor in new_donors_today if donor.amount is not None)
     
     # Get payment method breakdown
     payment_methods = {}
@@ -499,19 +555,26 @@ def get_new_donors_today():
     
     average_new_donors = round(sum(last_30_days_counts) / len(last_30_days_counts)) if last_30_days_counts else 0
     
-    # Get data for the last 14 days for the graph
-    last_14_days_data = []
-    for i in range(14):
+    # Get historical data for the last 14 days
+    historical_data = []
+    for i in range(14, -1, -1):
         date = today - timedelta(days=i)
-        count = RecurringDonor.query.filter_by(startdate=date).count()
+        donors_on_date = RecurringDonor.query.filter_by(startdate=date).all()
+        
+        # Calculate daily value - ensure amount is available
+        daily_value = sum(donor.amount for donor in donors_on_date if donor.amount is not None)
+        
+        # Format date as DD.MM
         formatted_date = date.strftime('%d.%m')
-        last_14_days_data.append({
+        
+        historical_data.append({
             'date': formatted_date,
-            'count': count
+            'count': len(donors_on_date),
+            'value': daily_value
         })
     
     # Reverse the data so it's in chronological order (oldest to newest)
-    last_14_days_data.reverse()
+    historical_data.reverse()
     
     return jsonify({
         'count': len(new_donors_today),
@@ -519,7 +582,7 @@ def get_new_donors_today():
         'average_new_donors_last_30_days': average_new_donors,
         'payment_methods': payment_methods,
         'products': products,
-        'last_14_days': last_14_days_data
+        'last_14_days': historical_data
     })
 
 # Create database tables if they don't exist

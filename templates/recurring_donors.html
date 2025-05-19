@@ -163,7 +163,6 @@
             <tr>
                 <th>Navn ID</th>
                 <th>Betalingsmåte</th>
-                <th>Avtale nr.</th>
                 <th>Beløp</th>
                 <th>Startdato</th>
                 <th>Produkt</th>
@@ -178,7 +177,6 @@
                         {{ donor.payment_method }}
                     </span>
                 </td>
-                <td>{{ donor.agreement_number }}</td>
                 <td><span style="white-space: nowrap;">{{ donor.amount|int }} kr</span></td>
                 <td>{{ donor.startdate }}</td>
                 <td>{{ donor.producttype_id }}</td>
@@ -211,8 +209,8 @@
             var toDate = $('#date-filter-to').val();
             
             $('.donors-table tbody tr').each(function() {
-                var productCell = $(this).find('td:eq(5)').text().trim();
-                var dateCell = $(this).find('td:eq(4)').text().trim();
+                var productCell = $(this).find('td:eq(4)').text().trim();
+                var dateCell = $(this).find('td:eq(3)').text().trim();
                 var dateMatch = true;
                 
                 // Process date filtering

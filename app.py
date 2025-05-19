@@ -498,6 +498,7 @@ def recurring_donors():
     donor_data = []
     total_amount = 0
     unique_products = set()
+    unique_payment_methods = set()
     
     for donor in donors:
         donor_info = {
@@ -515,18 +516,24 @@ def recurring_donors():
         # Add product to the unique products set
         if donor.producttype_id:
             unique_products.add(donor.producttype_id)
+            
+        # Add payment method to the unique payment methods set
+        if donor.payment_method:
+            unique_payment_methods.add(donor.payment_method)
     
     # Format the total amount with thousand separator
     formatted_total = '{:,.0f}'.format(total_amount).replace(',', ' ')
     
-    # Convert the set to a sorted list for the template
+    # Convert the sets to sorted lists for the template
     product_list = sorted(list(unique_products))
+    payment_method_list = sorted(list(unique_payment_methods))
     
     return render_template('recurring_donors.html', 
                            donors=donor_data, 
                            total_donors=len(donor_data), 
                            total_amount=formatted_total,
-                           products=product_list)
+                           products=product_list,
+                           payment_methods=payment_method_list)
 
 @app.route('/service')
 def service():

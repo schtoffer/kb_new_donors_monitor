@@ -351,6 +351,36 @@ h1 {
     justify-content: flex-end;
 }
 
+/* ===== BUTTON STYLES ===== */
+.button {
+    padding: 8px 15px;
+    border: none;
+    border-radius: 6px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.button.primary {
+    background-color: var(--primary-color);
+    color: white;
+}
+
+.button.primary:hover {
+    background-color: #e64500;
+}
+
+.button.secondary {
+    background-color: #f0f0f0;
+    color: #555;
+}
+
+.button.secondary:hover {
+    background-color: #e0e0e0;
+}
+
+/* Keep the old class names for backward compatibility */
 .filter-button {
     padding: 8px 15px;
     border: none;

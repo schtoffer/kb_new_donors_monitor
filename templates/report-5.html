@@ -1,0 +1,507 @@
+{% extends "layout.html" %}
+
+{% block title %}Hjerteslag - Nye faste givere{% endblock %}
+
+{% block head_scripts %}
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css">
+{% endblock %}
+
+{% block additional_styles %}
+<style>
+    body {
+        text-align: center;
+        background-color: var(--background-color);
+    }
+    
+    /* Reduce space above content */
+    .container {
+        margin-top: 15px !important;
+    }
+    
+    h1 {
+        color: rgb(33, 31, 32);
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        font-size: 28px;
+        font-weight: 700;
+        margin: 0 0 15px 0;
+        padding: 0;
+        text-align: center;
+    }
+    
+    .impact-container {
+        margin: 15px auto;
+        max-width: 460px;
+        padding: 0 10px;
+    }
+    
+    .impact-number {
+        font-size: 72px;
+        font-weight: bold;
+        color: var(--primary-color);
+        margin: 5px 0;
+        animation: pulse 2s infinite ease-in-out;
+    }
+    
+    .impact-text {
+        font-size: 22px;
+        margin-bottom: 30px;
+        max-width: 460px;
+        margin-left: auto;
+        margin-right: auto;
+        font-weight: 500;
+    }
+    
+    .hearts-container {
+        display: flex;
+        justify-content: center;
+        margin: 25px 0 35px 0;
+        flex-wrap: wrap;
+        max-width: 95%;
+        margin-left: auto;
+        margin-right: auto;
+    }
+    
+    .heart {
+        display: inline-block;
+        position: relative;
+        width: 24px;
+        height: 24px;
+        margin: 8px;
+        opacity: 0;
+        animation: fadeIn 0.5s forwards, pulse 2s infinite ease-in-out;
+    }
+    
+    .heart:before,
+    .heart:after {
+        content: "";
+        position: absolute;
+        left: 12px;
+        top: 0;
+        width: 12px;
+        height: 20px;
+        background: var(--primary-color);
+        border-radius: 12px 12px 0 0;
+        transform: rotate(-45deg);
+        transform-origin: 0 100%;
+    }
+    
+    .heart:after {
+        left: 0;
+        transform: rotate(45deg);
+        transform-origin: 100% 100%;
+    }
+    
+    .value-container {
+        margin: 30px auto;
+        background-color: rgba(255, 255, 255, 0.7);
+        border-radius: 15px;
+        padding: 20px;
+        max-width: 400px;
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        animation: fadeIn 1s;
+    }
+    
+    .value-title {
+        font-size: 20px;
+        font-weight: bold;
+        margin-bottom: 15px;
+        color: #333;
+    }
+    
+    .value-amount {
+        font-size: 32px;
+        font-weight: bold;
+        color: var(--primary-color);
+        margin: 15px 0;
+    }
+    
+    .value-description {
+        font-size: 16px;
+        margin: 10px 0;
+        color: #555;
+    }
+    
+    .stats-container {
+        display: flex;
+        justify-content: space-around;
+        margin: 25px 0;
+        flex-wrap: wrap;
+    }
+    
+    .stat-item {
+        flex: 1;
+        min-width: 120px;
+        margin: 10px;
+        padding: 15px;
+        background-color: white;
+        border-radius: 10px;
+        box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+        animation: fadeIn 1.5s;
+    }
+    
+    .stat-label {
+        font-size: 14px;
+        color: #555;
+        margin-bottom: 5px;
+    }
+    
+    .stat-value {
+        font-size: 24px;
+        font-weight: bold;
+        color: #333;
+    }
+    
+    .stat-value.average {
+        color: #4a90e2;
+    }
+    
+    .stat-value.today {
+        color: var(--primary-color);
+    }
+    
+    .quote-container {
+        margin: 30px auto;
+        padding: 20px;
+        background-color: rgba(255, 255, 255, 0.7);
+        border-left: 4px solid var(--primary-color);
+        border-radius: 5px;
+        max-width: 400px;
+        font-style: italic;
+        text-align: left;
+        animation: fadeIn 2s;
+    }
+    
+    @keyframes fadeIn {
+        0% {
+            opacity: 0;
+        }
+        100% {
+            opacity: 1;
+        }
+    }
+    
+    @keyframes pulse {
+        0% {
+            transform: scale(1);
+        }
+        50% {
+            transform: scale(1.05);
+        }
+        100% {
+            transform: scale(1);
+        }
+    }
+    
+    /* Responsive design for smaller screens */
+    /* Graph styles */
+    .graph-container {
+        margin: 30px auto;
+        background-color: rgba(255, 255, 255, 0.7);
+        border-radius: 15px;
+        padding: 20px;
+        max-width: 400px;
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        animation: fadeIn 1s;
+    }
+    
+    .graph-title {
+        font-size: 18px;
+        font-weight: bold;
+        margin-bottom: 15px;
+        color: #333;
+        text-align: center;
+    }
+    
+    .graph {
+        height: 180px;
+        display: flex;
+        align-items: flex-end;
+        justify-content: space-between;
+        padding: 10px 0;
+        margin: 10px 0;
+        position: relative;
+    }
+    
+    .graph::after {
+        content: '';
+        position: absolute;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        height: 1px;
+        background-color: #ddd;
+    }
+    
+    .graph-bar {
+        flex: 1;
+        margin: 0 2px;
+        background-color: #4a90e2;
+        min-width: 10px;
+        border-radius: 3px 3px 0 0;
+        position: relative;
+        transition: height 0.5s ease;
+    }
+    
+    .graph-bar.today {
+        background-color: var(--primary-color);
+    }
+    
+    .graph-bar-label {
+        position: absolute;
+        bottom: -20px;
+        left: 50%;
+        transform: translateX(-50%);
+        font-size: 10px;
+        color: #666;
+        white-space: nowrap;
+    }
+    
+    .graph-bar-value {
+        position: absolute;
+        top: -20px;
+        left: 50%;
+        transform: translateX(-50%);
+        font-size: 12px;
+        font-weight: bold;
+        color: #333;
+    }
+    
+    .graph-loading {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        color: #666;
+        font-style: italic;
+    }
+    
+    .graph-legend {
+        display: flex;
+        justify-content: center;
+        margin-top: 25px;
+    }
+    
+    .graph-legend-item {
+        display: flex;
+        align-items: center;
+        margin: 0 10px;
+    }
+    
+    .graph-legend-color {
+        width: 12px;
+        height: 12px;
+        border-radius: 2px;
+        margin-right: 5px;
+    }
+    
+    .today-color {
+        background-color: var(--primary-color);
+    }
+    
+    .history-color {
+        background-color: #4a90e2;
+    }
+    
+    .graph-legend-label {
+        font-size: 12px;
+        color: #666;
+    }
+    
+    @media (max-width: 480px) {
+        .impact-number {
+            font-size: 64px;
+        }
+        
+        .impact-text {
+            font-size: 20px;
+        }
+        
+        .value-amount {
+            font-size: 28px;
+        }
+        
+        .heart {
+            width: 20px;
+            height: 20px;
+            margin: 6px;
+        }
+        
+        .heart:before,
+        .heart:after {
+            left: 10px;
+            width: 10px;
+            height: 16px;
+        }
+        
+        .graph {
+            height: 150px;
+        }
+        
+        .graph-bar {
+            margin: 0 1px;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+    <div class="container">
+        <h1>Hjerteslag</h1>
+        
+        <div class="impact-container">
+            <div class="impact-number" id="newDonorsToday">--</div>
+            <div class="impact-text">
+                nye hjerter slår for et varmere samfunn i dag
+            </div>
+            
+            <div id="hearts-container" class="hearts-container">
+                <!-- Hearts will be added here dynamically -->
+            </div>
+        </div>
+        
+        <div class="value-container animate__animated animate__fadeIn">
+            <div class="value-title">Årlig verdi av dagens nye givere</div>
+            <div class="value-amount" id="yearlyValueNewDonors">--</div>
+            <div class="value-description">
+                Disse midlene vil hjelpe oss å nå ut til flere mennesker som trenger støtte og omsorg.
+            </div>
+        </div>
+        
+        <div class="graph-container">
+            <div class="graph-title">Nye faste givere siste 14 dager</div>
+            <div class="graph" id="donorsGraph">
+                <!-- Graph will be rendered here -->
+                <div class="graph-loading">Laster graf...</div>
+            </div>
+            <div class="graph-legend">
+                <div class="graph-legend-item">
+                    <div class="graph-legend-color today-color"></div>
+                    <div class="graph-legend-label">I dag</div>
+                </div>
+                <div class="graph-legend-item">
+                    <div class="graph-legend-color history-color"></div>
+                    <div class="graph-legend-label">Tidligere dager</div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="quote-container">
+            "Bak hvert hjerte står en person som har valgt å støtte oss med et fast beløp hver måned. 
+            Takket være dem kan vi hjelpe flere oppleve respekt, rettferdighet og omsorg."
+        </div>
+    </div>
+    
+    <script>
+        // Function to fetch data and update the display
+        function updateDisplay() {
+            // Fetch data from API
+            fetch('/api/new-donors-today')
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Network response was not ok');
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    // Update the UI with the data from the server
+                    const donorCount = data.count;
+                    const yearlyValue = data.yearly_value;
+                    const last14Days = data.last_14_days;
+                    
+                    // Update the UI
+                    document.getElementById('newDonorsToday').textContent = donorCount;
+                    document.getElementById('yearlyValueNewDonors').textContent = yearlyValue.toLocaleString('no-NO') + ' kr';
+                    
+                    // Create hearts based on the number of new donors
+                    createHearts(donorCount);
+                    
+                    // Render the graph with the last 14 days data
+                    renderGraph(last14Days);
+                })
+                .catch(error => {
+                    console.error('Error fetching data:', error);
+                    
+                    // If there's an error, show placeholder data
+                    const placeholderDonors = Math.floor(Math.random() * 35) + 15;
+                    const placeholderYearlyValue = placeholderDonors * 720; // Assuming average annual value of 720 per donor
+                    
+                    document.getElementById('newDonorsToday').textContent = placeholderDonors;
+                    document.getElementById('yearlyValueNewDonors').textContent = placeholderYearlyValue.toLocaleString('no-NO') + ' kr';
+                    
+                    // Create hearts based on the placeholder number
+                    createHearts(placeholderDonors);
+                    
+                    // Create placeholder data for the graph
+                    const placeholderGraphData = [];
+                    const today = new Date();
+                    for (let i = 13; i >= 0; i--) {
+                        const date = new Date(today);
+                        date.setDate(date.getDate() - i);
+                        const formattedDate = `${date.getDate().toString().padStart(2, '0')}.${(date.getMonth() + 1).toString().padStart(2, '0')}`;
+                        placeholderGraphData.push({
+                            date: formattedDate,
+                            count: Math.floor(Math.random() * 20) + 5
+                        });
+                    }
+                    renderGraph(placeholderGraphData);
+                });
+        }
+        
+        // Function to create hearts based on the number of new donors
+        function createHearts(count) {
+            const heartsContainer = document.getElementById('hearts-container');
+            heartsContainer.innerHTML = '';
+            
+            // Show all hearts with staggered animation
+            for (let i = 0; i < count; i++) {
+                const heart = document.createElement('div');
+                heart.className = 'heart';
+                // Stagger the animation for a more dynamic effect
+                heart.style.animationDelay = `${i * 0.05}s`;
+                heartsContainer.appendChild(heart);
+            }
+        }
+        
+        // Function to render the minimalistic graph
+        function renderGraph(data) {
+            const graphContainer = document.getElementById('donorsGraph');
+            graphContainer.innerHTML = '';
+            
+            // Find the maximum value for scaling
+            const maxValue = Math.max(...data.map(item => item.count));
+            
+            // Create a bar for each day
+            data.forEach((dayData, index) => {
+                const bar = document.createElement('div');
+                bar.className = 'graph-bar';
+                
+                // Mark today's bar with a different color
+                if (index === data.length - 1) {
+                    bar.classList.add('today');
+                }
+                
+                // Calculate the height as a percentage of the maximum value
+                // Minimum height of 5% to ensure visibility of low values
+                const heightPercent = maxValue > 0 ? 
+                    Math.max(5, (dayData.count / maxValue) * 100) : 5;
+                bar.style.height = `${heightPercent}%`;
+                
+                // Add the value label for bars with non-zero values
+                if (dayData.count > 0) {
+                    const valueLabel = document.createElement('div');
+                    valueLabel.className = 'graph-bar-value';
+                    valueLabel.textContent = dayData.count;
+                    bar.appendChild(valueLabel);
+                }
+                
+                graphContainer.appendChild(bar);
+            });
+        }
+        
+        // Initial display update
+        updateDisplay();
+        
+        // Set up auto-refresh every 5 minutes
+        setInterval(updateDisplay, 300000);
+    </script>
+{% endblock %}

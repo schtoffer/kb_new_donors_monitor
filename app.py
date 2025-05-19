@@ -128,7 +128,7 @@ API_KEY = os.environ.get('VENDOR_API_KEY', 'test_api_key_123')
 
 @app.route('/')
 def index():
-    return render_template('report-4.html')
+    return render_template('report-5.html')
 
 @app.route('/report')
 def report():
@@ -145,6 +145,10 @@ def alternative_3():
 @app.route('/report-4')
 def report_4():
     return render_template('report-4.html')
+
+@app.route('/report-5')
+def report_5():
+    return render_template('report-5.html')
 
 @app.route('/recurring-donors')
 def recurring_donors():
@@ -462,6 +466,7 @@ def get_recurring_donors():
 def get_new_donors_today():
     """
     Get statistics about new donors that started today based on the startdate column
+    Also includes data for the last 14 days for the graph
     """
     today = datetime.now().date()
     
@@ -494,12 +499,27 @@ def get_new_donors_today():
     
     average_new_donors = round(sum(last_30_days_counts) / len(last_30_days_counts)) if last_30_days_counts else 0
     
+    # Get data for the last 14 days for the graph
+    last_14_days_data = []
+    for i in range(14):
+        date = today - timedelta(days=i)
+        count = RecurringDonor.query.filter_by(startdate=date).count()
+        formatted_date = date.strftime('%d.%m')
+        last_14_days_data.append({
+            'date': formatted_date,
+            'count': count
+        })
+    
+    # Reverse the data so it's in chronological order (oldest to newest)
+    last_14_days_data.reverse()
+    
     return jsonify({
         'count': len(new_donors_today),
         'yearly_value': yearly_value,
         'average_new_donors_last_30_days': average_new_donors,
         'payment_methods': payment_methods,
-        'products': products
+        'products': products,
+        'last_14_days': last_14_days_data
     })
 
 # Create database tables if they don't exist

@@ -1,4 +1,8 @@
-from flask import Flask, render_template, jsonify, request
+from flask import Flask, render_template, jsonify, request, redirect, url_for
+import pandas as pd
+import tempfile
+import os
+from werkzeug.utils import secure_filename
 from flask_sqlalchemy import SQLAlchemy
 from datetime import datetime, timedelta
 import random
@@ -195,9 +199,279 @@ API_KEY = os.environ.get('VENDOR_API_KEY', 'test_api_key_123')
 def index():
     return render_template('report-5.html')
 
-@app.route('/report')
-def report():
-    return render_template('report.html')
+@app.route('/import')
+def import_page():
+    return render_template('import.html')
+
+@app.route('/import-excel', methods=['POST'])
+def import_excel():
+    if 'file' not in request.files:
+        return jsonify({
+            'success': False,
+            'message': 'No file part in the request'
+        })
+    
+    file = request.files['file']
+    
+    if file.filename == '':
+        return jsonify({
+            'success': False,
+            'message': 'No file selected'
+        })
+    
+    # Check if the file is an Excel file
+    if not file.filename.endswith(('.xlsx', '.xls')):
+        return jsonify({
+            'success': False,
+            'message': 'File must be an Excel file (.xlsx or .xls)'
+        })
+    
+    # Save the file to a temporary location
+    temp_dir = tempfile.gettempdir()
+    filename = secure_filename(file.filename)
+    filepath = os.path.join(temp_dir, filename)
+    file.save(filepath)
+    
+    # Process the Excel file
+    try:
+        results = process_excel_file(filepath)
+        
+        # Delete the temporary file
+        os.remove(filepath)
+        
+        return jsonify({
+            'success': True,
+            'message': f'Import completed successfully: {results["added"]} added, {results["updated"]} updated, {results["skipped"]} skipped',
+            'results': results
+        })
+    except Exception as e:
+        # Delete the temporary file if it exists
+        if os.path.exists(filepath):
+            os.remove(filepath)
+        
+        app.logger.error(f'Error processing Excel file: {str(e)}')
+        return jsonify({
+            'success': False,
+            'message': f'Error processing Excel file: {str(e)}'
+        })
+
+def process_excel_file(filepath):
+    """
+    Process the Excel file and update/insert records in the database
+    based on the unique combination of agreement_number and navnenummer.
+    
+    Returns a dictionary with counts of added, updated, and skipped records.
+    """
+    # Initialize counters
+    added = 0
+    updated = 0
+    skipped = 0
+    details = []
+    
+    # Read the Excel file
+    df = pd.read_excel(filepath)
+    
+    # Define the allowed columns we want to import
+    allowed_columns = [
+        'Navnenr', 'Register', 'Register.1', 'Avtalenummer', 'Postnummer', 'Poststed', 
+        'Kommune', 'Fylke', 'Landkode', 'Land', 'Navnetype', 'Fødselsår/startår',
+        'Produktkode', 'Produkttype', 'Prosjektnummer', 'Produkt', 'Prosjektnavn',
+        'Startdato', 'Betalingsmåte', 'Girorytme', 'Betalingsrytme', 'Beløp',
+        'Aksjonstype', 'Aksjonstype beskrivelse', 'Aksjonsnummer', 'Aksjonsnavn',
+        'Avtaletype', 'Periode beløp', 'Opprettet dato'
+    ]
+    
+    # Filter the DataFrame to only include the allowed columns
+    filtered_columns = [col for col in df.columns if col in allowed_columns]
+    df_filtered = df[filtered_columns]
+    
+    # Filter to only include rows where Produkttype is MI or FG
+    if 'Produkttype' in df_filtered.columns:
+        app.logger.info(f"Before filtering by Produkttype: {len(df_filtered)} records")
+        df_filtered = df_filtered[df_filtered['Produkttype'].isin(['MI', 'FG'])]
+        app.logger.info(f"After filtering by Produkttype: {len(df_filtered)} records")
+    
+    # Create a mapping from Excel column names to database field names
+    field_mapping = {
+        'Navnenr': 'navnenr',
+        'Register': 'register',
+        'Register.1': 'register_1',
+        'Avtalenummer': 'avtalenummer',
+        'Postnummer': 'postnummer',
+        'Poststed': 'poststed',
+        'Kommune': 'kommune',
+        'Fylke': 'fylke',
+        'Landkode': 'landkode',
+        'Land': 'land',
+        'Navnetype': 'navnetype',
+        'Fødselsår/startår': 'fodselsaar_startaar',
+        'Produktkode': 'produktkode',
+        'Produkttype': 'produkttype',
+        'Prosjektnummer': 'prosjektnummer',
+        'Produkt': 'produkt',
+        'Prosjektnavn': 'prosjektnavn',
+        'Startdato': 'startdato',
+        'Betalingsmåte': 'betalingsmaate',
+        'Girorytme': 'girorytme',
+        'Betalingsrytme': 'betalingsrytme',
+        'Beløp': 'belop',
+        'Aksjonstype': 'aksjonstype',
+        'Aksjonstype beskrivelse': 'aksjonstype_beskrivelse',
+        'Aksjonsnummer': 'aksjonsnummer',
+        'Aksjonsnavn': 'aksjonsnavn',
+        'Avtaletype': 'avtaletype',
+        'Periode beløp': 'periode_belop',
+        'Opprettet dato': 'opprettet_dato'
+    }
+    
+    # Map legacy fields for backward compatibility
+    legacy_field_mapping = {
+        'Navnenr': 'name_id',
+        'Avtalenummer': 'agreement_number',
+        'Postnummer': 'zip_code',
+        'Landkode': 'country_id',
+        'Navnetype': 'nametype_id',
+        'Produkttype': 'producttype_id',
+        'Prosjektnummer': 'project_id',
+        'Beløp': 'amount',
+        'Betalingsrytme': 'interval',
+        'Startdato': 'startdate',
+        'Betalingsmåte': 'payment_method'
+    }
+    
+    # Convert filtered DataFrame to list of dictionaries
+    records = df_filtered.to_dict('records')
+    
+    with app.app_context():
+        for record in records:
+            # Create a dictionary with only the allowed fields from Excel
+            donor_data = {}
+            
+            # Map allowed Excel columns to their corresponding database fields
+            for column, value in record.items():
+                if column in field_mapping:
+                    field_name = field_mapping[column]
+                    
+                    # Handle NaN values
+                    if pd.isna(value):
+                        donor_data[field_name] = None
+                    # Handle numeric fields
+                    elif field_name in ['navnenr', 'prosjektnummer', 'girorytme']:
+                        try:
+                            donor_data[field_name] = int(value) if not pd.isna(value) else None
+                        except (ValueError, TypeError):
+                            donor_data[field_name] = None
+                    # Handle float fields
+                    elif field_name in ['belop', 'periode_belop']:
+                        try:
+                            donor_data[field_name] = float(value) if not pd.isna(value) else None
+                        except (ValueError, TypeError):
+                            donor_data[field_name] = None
+                    # Handle all other fields as strings
+                    else:
+                        donor_data[field_name] = str(value) if not pd.isna(value) else None
+            
+            # Also populate legacy fields for backward compatibility
+            for column, legacy_field in legacy_field_mapping.items():
+                if column in record:
+                    value = record[column]
+                    
+                    # Special handling for certain legacy fields
+                    if legacy_field == 'startdate' and not pd.isna(value):
+                        try:
+                            # Try to parse the date
+                            date_str = str(value)
+                            if '.' in date_str:
+                                donor_data[legacy_field] = datetime.strptime(date_str, '%d.%m.%Y').date()
+                                # Store the date only in the date object format, not as a string
+                                if 'startdato' in donor_data:
+                                    donor_data.pop('startdato')
+                            else:
+                                donor_data[legacy_field] = datetime.strptime(date_str, '%Y-%m-%d').date()
+                        except (ValueError, TypeError):
+                            donor_data[legacy_field] = None
+                    elif legacy_field in ['name_id', 'project_id'] and not pd.isna(value):
+                        try:
+                            donor_data[legacy_field] = int(value)
+                        except (ValueError, TypeError):
+                            donor_data[legacy_field] = None
+                    elif legacy_field == 'amount' and not pd.isna(value):
+                        try:
+                            donor_data[legacy_field] = float(value)
+                        except (ValueError, TypeError):
+                            donor_data[legacy_field] = None
+                    elif not pd.isna(value):
+                        donor_data[legacy_field] = str(value)
+            
+            # Set default values for campaign_id and classification_id_success if not present
+            if 'campaign_id' not in donor_data or donor_data['campaign_id'] is None:
+                donor_data['campaign_id'] = random.randint(1, 10)
+            
+            if 'classification_id_success' not in donor_data or donor_data['classification_id_success'] is None:
+                donor_data['classification_id_success'] = 'S1'
+            
+            # Only process the donor if Produkttype is MI or FG
+            produkttype = donor_data.get('produkttype')
+            if produkttype in ['MI', 'FG']:
+                try:
+                    # Check if we have both agreement_number and navnenr/name_id
+                    agreement_number = donor_data.get('agreement_number')
+                    name_id = donor_data.get('name_id')
+                    
+                    if agreement_number and name_id:
+                        # Check if a record with the same agreement_number and name_id exists
+                        existing_donor = RecurringDonor.query.filter_by(
+                            agreement_number=agreement_number,
+                            name_id=name_id
+                        ).first()
+                        
+                        if existing_donor:
+                            # Update existing record
+                            for key, value in donor_data.items():
+                                setattr(existing_donor, key, value)
+                            updated += 1
+                            details.append(f"Updated donor with agreement_number={agreement_number}, name_id={name_id}")
+                        else:
+                            # Add new record
+                            new_donor = RecurringDonor(**donor_data)
+                            db.session.add(new_donor)
+                            added += 1
+                            details.append(f"Added new donor with agreement_number={agreement_number}, name_id={name_id}")
+                    else:
+                        # Skip records without both agreement_number and name_id
+                        skipped += 1
+                        details.append(f"Skipped record: Missing agreement_number or name_id")
+                    
+                    # Commit every 100 records to avoid large transactions
+                    if (added + updated) % 100 == 0:
+                        db.session.commit()
+                        app.logger.info(f"Committed {added + updated} records so far...")
+                except Exception as e:
+                    app.logger.error(f"Error processing donor: {str(e)}")
+                    app.logger.error(f"Problematic data: {donor_data}")
+                    db.session.rollback()
+                    skipped += 1
+                    details.append(f"Error processing record: {str(e)}")
+            else:
+                skipped += 1
+                details.append(f"Skipped record with Produkttype: {produkttype if produkttype else 'Missing'}")
+        
+        # Final commit for any remaining records
+        try:
+            db.session.commit()
+            app.logger.info(f"Import completed: {added} added, {updated} updated, {skipped} skipped")
+        except Exception as e:
+            app.logger.error(f"Error during final commit: {str(e)}")
+            db.session.rollback()
+            details.append(f"Error during final commit: {str(e)}")
+    
+    # Return the results
+    return {
+        "added": added,
+        "updated": updated,
+        "skipped": skipped,
+        "details": details[:20]  # Limit details to avoid too large response
+    }
 
 @app.route('/alternative-2')
 def alternative_2():
@@ -571,8 +845,8 @@ def get_new_donors_today():
                         if hasattr(donor, 'produkttype') and donor.produkttype in ['MI', 'FG'] or 
                            hasattr(donor, 'producttype_id') and donor.producttype_id in ['MI', 'FG']]
     
-    # Calculate yearly value (amount * 12 for each donor) - ensure amount is available
-    yearly_value = sum(donor.amount * 12 for donor in new_donors_today if donor.amount is not None)
+    # Calculate total value (no longer multiplying by 12) - ensure amount is available
+    yearly_value = sum(donor.amount for donor in new_donors_today if donor.amount is not None)
     
     # Get payment method breakdown
     payment_methods = {}

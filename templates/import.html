@@ -1,0 +1,398 @@
+{% extends "layout.html" %}
+
+{% block title %}Import Excel Data{% endblock %}
+
+{% block additional_styles %}
+<style>
+    .import-container {
+        max-width: 100%;
+        margin: 0 auto;
+        padding: 20px;
+        text-align: center;
+    }
+
+    .drop-area {
+        border: 2px dashed var(--primary-color);
+        border-radius: 8px;
+        padding: 40px 20px;
+        margin: 20px 0;
+        background-color: rgba(252, 76, 2, 0.05);
+        transition: all 0.3s;
+        cursor: pointer;
+    }
+
+    .drop-area.highlight {
+        background-color: rgba(252, 76, 2, 0.15);
+        border-color: #e64500;
+    }
+
+    .drop-area i {
+        font-size: 48px;
+        color: var(--primary-color);
+        margin-bottom: 15px;
+    }
+
+    .drop-area p {
+        margin: 10px 0;
+        color: #555;
+    }
+
+    .file-info {
+        margin-top: 20px;
+        text-align: left;
+        display: none;
+    }
+
+    .progress-container {
+        margin-top: 20px;
+        display: none;
+    }
+
+    .progress-bar {
+        height: 10px;
+        background-color: #f0f0f0;
+        border-radius: 5px;
+        margin-bottom: 10px;
+        overflow: hidden;
+    }
+
+    .progress {
+        height: 100%;
+        background-color: var(--primary-color);
+        width: 0%;
+        transition: width 0.3s;
+    }
+
+    .import-btn {
+        background-color: var(--primary-color);
+        color: white;
+        border: none;
+        padding: 10px 20px;
+        border-radius: 5px;
+        cursor: pointer;
+        font-weight: bold;
+        margin-top: 20px;
+        display: none;
+    }
+
+    .import-btn:hover {
+        background-color: #e64500;
+    }
+
+    .import-btn:disabled {
+        background-color: #ccc;
+        cursor: not-allowed;
+    }
+
+    .status-message {
+        margin-top: 20px;
+        padding: 10px;
+        border-radius: 5px;
+        display: none;
+    }
+
+    .status-message.success {
+        background-color: #d4edda;
+        color: #155724;
+        border: 1px solid #c3e6cb;
+    }
+
+    .status-message.error {
+        background-color: #f8d7da;
+        color: #721c24;
+        border: 1px solid #f5c6cb;
+    }
+
+    .status-message.info {
+        background-color: #d1ecf1;
+        color: #0c5460;
+        border: 1px solid #bee5eb;
+    }
+
+    .import-results {
+        margin-top: 20px;
+        text-align: left;
+        display: none;
+    }
+
+    .import-results h3 {
+        margin-bottom: 10px;
+    }
+
+    .import-results ul {
+        list-style-type: none;
+        padding: 0;
+    }
+
+    .import-results li {
+        padding: 5px 0;
+        border-bottom: 1px solid #eee;
+    }
+    
+    /* Loading spinner */
+    .spinner {
+        display: inline-block;
+        width: 20px;
+        height: 20px;
+        border: 3px solid rgba(255,255,255,.3);
+        border-radius: 50%;
+        border-top-color: #fff;
+        animation: spin 1s ease-in-out infinite;
+        margin-right: 10px;
+        vertical-align: middle;
+    }
+
+    @keyframes spin {
+        to { transform: rotate(360deg); }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="import-container">
+    <h1>Import Excel Data</h1>
+    <p>Drag and drop your Excel file or click to select</p>
+    
+    <div id="dropArea" class="drop-area">
+        <i class="fa fa-file-excel-o"></i>
+        <p>Drag & Drop Excel File Here</p>
+        <p>or</p>
+        <input type="file" id="fileInput" accept=".xlsx,.xls" style="display: none;">
+        <button id="browseBtn" class="import-btn" style="display: inline-block;">Browse Files</button>
+    </div>
+    
+    <div id="fileInfo" class="file-info">
+        <h3>Selected File:</h3>
+        <p id="fileName"></p>
+        <p id="fileSize"></p>
+    </div>
+    
+    <div id="progressContainer" class="progress-container">
+        <div class="progress-bar">
+            <div id="progressBar" class="progress"></div>
+        </div>
+        <p id="progressText">0%</p>
+    </div>
+    
+    <button id="importBtn" class="import-btn">
+        <span id="importSpinner" class="spinner" style="display: none;"></span>
+        Import Data
+    </button>
+    
+    <div id="statusMessage" class="status-message"></div>
+    
+    <div id="importResults" class="import-results">
+        <h3>Import Results:</h3>
+        <ul id="resultsList"></ul>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://use.fontawesome.com/a95a5e8f5e.js"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const dropArea = document.getElementById('dropArea');
+        const fileInput = document.getElementById('fileInput');
+        const browseBtn = document.getElementById('browseBtn');
+        const importBtn = document.getElementById('importBtn');
+        const fileInfo = document.getElementById('fileInfo');
+        const fileName = document.getElementById('fileName');
+        const fileSize = document.getElementById('fileSize');
+        const progressContainer = document.getElementById('progressContainer');
+        const progressBar = document.getElementById('progressBar');
+        const progressText = document.getElementById('progressText');
+        const statusMessage = document.getElementById('statusMessage');
+        const importResults = document.getElementById('importResults');
+        const resultsList = document.getElementById('resultsList');
+        const importSpinner = document.getElementById('importSpinner');
+        
+        let selectedFile = null;
+        
+        // Prevent default drag behaviors
+        ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+            dropArea.addEventListener(eventName, preventDefaults, false);
+            document.body.addEventListener(eventName, preventDefaults, false);
+        });
+        
+        // Highlight drop area when item is dragged over it
+        ['dragenter', 'dragover'].forEach(eventName => {
+            dropArea.addEventListener(eventName, highlight, false);
+        });
+        
+        ['dragleave', 'drop'].forEach(eventName => {
+            dropArea.addEventListener(eventName, unhighlight, false);
+        });
+        
+        // Handle dropped files
+        dropArea.addEventListener('drop', handleDrop, false);
+        
+        // Handle browse button
+        browseBtn.addEventListener('click', () => {
+            fileInput.click();
+        });
+        
+        // Handle file selection via input
+        fileInput.addEventListener('change', handleFiles, false);
+        
+        // Handle import button
+        importBtn.addEventListener('click', startImport, false);
+        
+        function preventDefaults(e) {
+            e.preventDefault();
+            e.stopPropagation();
+        }
+        
+        function highlight() {
+            dropArea.classList.add('highlight');
+        }
+        
+        function unhighlight() {
+            dropArea.classList.remove('highlight');
+        }
+        
+        function handleDrop(e) {
+            const dt = e.dataTransfer;
+            const files = dt.files;
+            
+            if (files.length > 0) {
+                handleFiles({ target: { files: files } });
+            }
+        }
+        
+        function handleFiles(e) {
+            const files = e.target.files;
+            if (files.length > 0) {
+                selectedFile = files[0];
+                
+                // Check if file is Excel
+                const validTypes = ['.xlsx', '.xls', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', 'application/vnd.ms-excel'];
+                const fileType = selectedFile.type || '.' + selectedFile.name.split('.').pop();
+                
+                if (!validTypes.includes(fileType)) {
+                    showStatus('Please select a valid Excel file (.xlsx or .xls)', 'error');
+                    return;
+                }
+                
+                // Display file info
+                fileName.textContent = `Name: ${selectedFile.name}`;
+                fileSize.textContent = `Size: ${formatFileSize(selectedFile.size)}`;
+                fileInfo.style.display = 'block';
+                importBtn.style.display = 'inline-block';
+                
+                // Reset status and results
+                statusMessage.style.display = 'none';
+                importResults.style.display = 'none';
+                resultsList.innerHTML = '';
+            }
+        }
+        
+        function formatFileSize(bytes) {
+            if (bytes === 0) return '0 Bytes';
+            
+            const k = 1024;
+            const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+        }
+        
+        function startImport() {
+            if (!selectedFile) {
+                showStatus('Please select a file first', 'error');
+                return;
+            }
+            
+            // Show progress and disable import button
+            progressContainer.style.display = 'block';
+            importBtn.disabled = true;
+            importSpinner.style.display = 'inline-block';
+            importBtn.textContent = ' Importing...';
+            importBtn.prepend(importSpinner);
+            
+            // Create FormData and append file
+            const formData = new FormData();
+            formData.append('file', selectedFile);
+            
+            // Send file to server
+            const xhr = new XMLHttpRequest();
+            xhr.open('POST', '/import-excel', true);
+            
+            // Track upload progress
+            xhr.upload.onprogress = function(e) {
+                if (e.lengthComputable) {
+                    const percentComplete = Math.round((e.loaded / e.total) * 100);
+                    progressBar.style.width = percentComplete + '%';
+                    progressText.textContent = percentComplete + '%';
+                }
+            };
+            
+            // Handle response
+            xhr.onload = function() {
+                importBtn.disabled = false;
+                importSpinner.style.display = 'none';
+                importBtn.textContent = 'Import Data';
+                
+                if (xhr.status === 200) {
+                    try {
+                        const response = JSON.parse(xhr.responseText);
+                        
+                        if (response.success) {
+                            showStatus(response.message, 'success');
+                            displayResults(response.results);
+                        } else {
+                            showStatus(response.message || 'Import failed', 'error');
+                        }
+                    } catch (e) {
+                        showStatus('Error processing server response', 'error');
+                    }
+                } else {
+                    showStatus('Error uploading file: ' + xhr.statusText, 'error');
+                }
+            };
+            
+            // Handle network errors
+            xhr.onerror = function() {
+                importBtn.disabled = false;
+                importSpinner.style.display = 'none';
+                importBtn.textContent = 'Import Data';
+                showStatus('Network error occurred', 'error');
+            };
+            
+            xhr.send(formData);
+        }
+        
+        function showStatus(message, type) {
+            statusMessage.textContent = message;
+            statusMessage.className = 'status-message ' + type;
+            statusMessage.style.display = 'block';
+        }
+        
+        function displayResults(results) {
+            if (!results) return;
+            
+            resultsList.innerHTML = '';
+            
+            // Add summary
+            const summaryItem = document.createElement('li');
+            summaryItem.innerHTML = `<strong>Summary:</strong> ${results.added} records added, ${results.updated} records updated, ${results.skipped} records skipped`;
+            resultsList.appendChild(summaryItem);
+            
+            // Add details if available
+            if (results.details && results.details.length > 0) {
+                const detailsHeader = document.createElement('li');
+                detailsHeader.innerHTML = '<strong>Details:</strong>';
+                resultsList.appendChild(detailsHeader);
+                
+                results.details.forEach(detail => {
+                    const detailItem = document.createElement('li');
+                    detailItem.textContent = detail;
+                    resultsList.appendChild(detailItem);
+                });
+            }
+            
+            importResults.style.display = 'block';
+        }
+    });
+</script>
+{% endblock %}

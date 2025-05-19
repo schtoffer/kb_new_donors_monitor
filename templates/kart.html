@@ -1,9 +1,9 @@
 {% extends "layout.html" %}
 
-{% block title %}Kart - Faste Givere{% endblock %}
+{% block title %}Fylkesoversikt - Faste Givere{% endblock %}
 
 {% block head_scripts %}
-<link rel="stylesheet" href="{{ url_for('static', filename='css/main.css') }}">
+<!-- Any additional scripts can go here -->
 {% endblock %}
 
 {% block additional_styles %}
@@ -12,11 +12,7 @@
 
 {% block content %}
 <div class="container">
-    <h1>Geografisk fordeling av faste givere</h1>
-    
-    <div class="map-container">
-        {{ map_html|safe }}
-    </div>
+    <h1>Fylkesoversikt av faste givere</h1>
     
     <div class="stats-container">
         <div class="stats-card">
@@ -25,7 +21,7 @@
                 {% for fylke, count in top_fylker %}
                 <div class="bar-container">
                     <div class="bar-label">{{ fylke }}</div>
-                    <div class="bar" style="width: {{ (count / top_fylker[0][1] * 200)|int }}px;"></div>
+                    <div class="bar bar-width-{{ (count / top_fylker[0][1] * 100)|int }}"></div>
                     <div class="bar-value">{{ count }}</div>
                 </div>
                 {% endfor %}

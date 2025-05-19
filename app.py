@@ -267,9 +267,6 @@ def kart():
     fylke_data = cursor.fetchall()
     conn.close()
     
-    # Create a map centered on Norway
-    m = folium.Map(location=[65.0, 13.0], zoom_start=4, tiles='CartoDB positron')
-    
     # Define mapping for fylke names to match current Norwegian counties (2024)
     fylke_mapping = {
         'Oslo': 'Oslo',
@@ -299,108 +296,30 @@ def kart():
         'Finnmark': 'Troms og Finnmark'
     }
     
-    # Convert data to a format suitable for Folium, mapping fylke names
-    fylke_dict = {}
+    # Convert data to a format suitable for display, mapping fylke names
+    consolidated_fylke_data = {}
     for row in fylke_data:
         fylke_name = row[0]
         count = row[1]
         # Map to current county name if available
         if fylke_name in fylke_mapping:
             mapped_name = fylke_mapping[fylke_name]
-            if mapped_name in fylke_dict:
-                fylke_dict[mapped_name] += count
+            if mapped_name in consolidated_fylke_data:
+                consolidated_fylke_data[mapped_name] += count
             else:
-                fylke_dict[mapped_name] = count
+                consolidated_fylke_data[mapped_name] = count
         else:
             # Keep original name if no mapping exists
-            fylke_dict[fylke_name] = count
+            consolidated_fylke_data[fylke_name] = count
     
-    # Get the minimum and maximum donor counts
-    min_donors = min(fylke_dict.values()) if fylke_dict else 0
-    max_donors = max(fylke_dict.values()) if fylke_dict else 0
-    
-    # Create a custom threshold scale for the choropleth map
-    # This will use white for 0 and gradually increase to dark orange
-    if max_donors > 0:
-        # Calculate the step size for the threshold scale
-        step = max_donors / 8 if max_donors > 8 else 1
-        # Create a threshold scale with white for 0
-        threshold_scale = [0, step, step*2, step*3, step*4, step*5, step*6, step*7, max_donors]
-    else:
-        # If there are no donors, use a default scale
-        threshold_scale = [0, 1, 2, 3, 4, 5, 6, 7, 8]
-    
-    # Create a choropleth map with custom color scheme
-    choropleth = folium.Choropleth(
-        geo_data='static/data/norway_fylker_kartverket_wgs84.geojson',
-        name='choropleth',
-        data=fylke_dict,
-        key_on='feature.properties.name',
-        fill_color='YlOrBr',  # Yellow-Orange-Brown color scheme
-        fill_opacity=0.7,
-        line_opacity=0.2,
-        legend_name='Antall faste givere',
-        highlight=True,
-        threshold_scale=threshold_scale
-    ).add_to(m)
-    
-    # Create a new GeoJson layer with custom tooltips showing both fylke name and donor count
-    # First, prepare the GeoJSON data with donor counts
-    import json
-    with open('static/data/norway_fylker_kartverket_wgs84.geojson', 'r') as f:
-        geojson_data = json.load(f)
-    
-    # Add donor counts to GeoJSON properties for tooltips
-    for feature in geojson_data['features']:
-        fylke_name = feature['properties']['name']
-        
-        # Check if this fylke has donors in our database
-        donor_count = 0
-        if fylke_name in fylke_dict:
-            donor_count = fylke_dict[fylke_name]
-        elif fylke_name in fylke_mapping and fylke_mapping[fylke_name] in fylke_dict:
-            # Try to find a match using the mapping
-            donor_count = fylke_dict[fylke_mapping[fylke_name]]
-        else:
-            # Try to find a match by checking if this fylke name is a key in the mapping
-            for db_name, mapped_name in fylke_mapping.items():
-                if mapped_name == fylke_name and db_name in fylke_dict:
-                    donor_count += fylke_dict[db_name]
-        
-        # Add donor count to properties for tooltip display
-        feature['properties']['donor_count'] = donor_count
-    
-    # Save the modified GeoJSON with donor counts
-    with open('static/data/norway_fylker_with_counts.geojson', 'w') as f:
-        json.dump(geojson_data, f)
-    
-    # Create a new GeoJson layer with tooltips showing both fylke name and donor count
-    tooltip_layer = folium.GeoJson(
-        'static/data/norway_fylker_with_counts.geojson',
-        name='tooltips',
-        style_function=lambda x: {
-            'fillColor': 'transparent',
-            'color': 'transparent',
-            'fillOpacity': 0.0,
-            'weight': 0.0
-        },
-        tooltip=folium.GeoJsonTooltip(
-            fields=['name', 'donor_count'],
-            aliases=['Fylke:', 'Antall givere:'],
-            style=('background-color: white; color: #333333; font-family: arial; font-size: 12px; padding: 10px;')
-        )
-    ).add_to(m)
-    
-    # Add layer control
-    folium.LayerControl().add_to(m)
+    # Convert the consolidated data back to a list of tuples for display
+    consolidated_fylke_list = [(fylke, count) for fylke, count in consolidated_fylke_data.items()]
+    consolidated_fylke_list.sort(key=lambda x: x[1], reverse=True)  # Sort by count in descending order
     
     # Create a bar chart for top 5 fylker
-    top_fylker = fylke_data[:5]
+    top_fylker = consolidated_fylke_list[:5]
     
-    # Save the map to an HTML file
-    map_html = m._repr_html_()
-    
-    return render_template('kart.html', map_html=map_html, fylke_data=fylke_data, top_fylker=top_fylker)
+    return render_template('kart.html', fylke_data=consolidated_fylke_list, top_fylker=top_fylker)
 
 @app.route('/import')
 def import_page():

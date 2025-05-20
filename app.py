@@ -19,19 +19,42 @@ import json
 logging.basicConfig(level=logging.INFO)
 
 app = Flask(__name__, instance_relative_config=True, static_folder='static', static_url_path='/static')
+
 # Make sure the instance folder exists
-os.makedirs(app.instance_path, exist_ok=True)
-# Use absolute path for SQLite database
-db_path = os.path.join(app.instance_path, 'donors.db')
-app.config['SQLALCHEMY_DATABASE_URI'] = f'sqlite:///{db_path}'
+try:
+    os.makedirs(app.instance_path, exist_ok=True)
+    app.logger.info(f'Instance path created: {app.instance_path}')
+except Exception as e:
+    app.logger.error(f'Error creating instance path: {e}')
+
+# Database configuration
+# Check for environment variables first (for Azure deployment)
+db_uri = os.environ.get('DATABASE_URL')
+
+if not db_uri:
+    # Use absolute path for SQLite database as fallback
+    db_path = os.path.join(app.instance_path, 'donors.db')
+    db_uri = f'sqlite:///{db_path}'
+    app.logger.info(f'Using SQLite database at: {db_path}')
+else:
+    app.logger.info(f'Using database from environment variable')
+
+app.config['SQLALCHEMY_DATABASE_URI'] = db_uri
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['TEMPLATES_AUTO_RELOAD'] = True
 
 # Log startup information
 app.logger.info('Starting KB FG Monitor application')
 app.logger.info(f'Current directory: {os.getcwd()}')
-app.logger.info(f'Files in current directory: {os.listdir(".")}')
-app.logger.info(f'Files in instance directory: {os.listdir("instance") if os.path.exists("instance") else "No instance directory"}')
+
+try:
+    app.logger.info(f'Files in current directory: {os.listdir(".")}')
+    if os.path.exists("instance"):
+        app.logger.info(f'Files in instance directory: {os.listdir("instance")}')
+    else:
+        app.logger.info("No instance directory found")
+except Exception as e:
+    app.logger.error(f'Error listing directory contents: {e}')
 
 # Disable caching
 @app.after_request
@@ -1135,6 +1158,7 @@ def get_new_donors_today():
 # Create database tables if they don't exist
 with app.app_context():
     try:
+        app.logger.info('Creating database tables if they don\'t exist')
         # Ensure the instance directory exists and has proper permissions
         os.makedirs(app.instance_path, exist_ok=True)
         # Create database tables

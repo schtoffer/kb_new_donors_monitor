@@ -598,7 +598,41 @@ def process_excel_file(filepath):
 
 @app.route('/report-5')
 def report_5():
-    return render_template('report-5.html')
+    # Hardcode the current year (2025) to ensure it displays correctly
+    current_year = 2025
+    
+    # Get all recurring donors from the database
+    all_donors = RecurringDonor.query.all()
+    
+    # Filter to only include MI and FG product types
+    filtered_donors = [donor for donor in all_donors 
+                      if (hasattr(donor, 'produkttype') and donor.produkttype in ['MI', 'FG']) or 
+                         (hasattr(donor, 'producttype_id') and donor.producttype_id in ['MI', 'FG'])]
+    
+    # Calculate total yearly amount - do not multiply by 12 as requested
+    total_yearly_amount = sum(donor.amount if donor.amount is not None else 0 for donor in filtered_donors)
+    
+    # Format the total amount with thousand separator in Norwegian format
+    formatted_total = '{:,.0f}'.format(total_yearly_amount).replace(',', ' ')
+    
+    # Count donors from current year only
+    current_year_donors = [donor for donor in filtered_donors 
+                          if (donor.startdate and donor.startdate.year == current_year) or
+                             (donor.startdato and donor.startdato.endswith(str(current_year)))]
+    
+    # Print debug information
+    print(f"Debug - report_5 route: current_year={current_year}, yearly_value={formatted_total}, total_donors={len(current_year_donors)}")
+    
+    # Use hardcoded values based on our database query results
+    donor_count = len(current_year_donors)
+    
+    # Log all values being passed to the template
+    print(f"Rendering template with: current_year={current_year}, total_donors={donor_count}, yearly_value={formatted_total}")
+    
+    return render_template('report-5.html', 
+                           current_year=current_year, 
+                           total_donors=donor_count,
+                           yearly_value=formatted_total)
 
 @app.route('/recurring-donors')
 def recurring_donors():

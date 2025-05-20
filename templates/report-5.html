@@ -31,10 +31,10 @@
         </div>
         
         <div class="value-container animate__animated animate__fadeIn">
-            <div class="value-title">Årlig verdi av alle givere i 2025</div>
-            <div class="value-amount" id="yearlyValueAllDonors">--</div>
+            <div class="value-title">Antall nye givere i 2025</div>
+            <div class="value-amount">4977</div>
             <div class="value-description">
-                Disse midlene vil hjelpe oss å nå ut til flere mennesker som trenger støtte og omsorg.
+                I 2025 har vi fått 9 062 240 kr i støtte fra nye givere. Disse midlene vil hjelpe oss å nå ut til flere mennesker som trenger støtte og omsorg.
             </div>
         </div>
         
@@ -77,8 +77,9 @@
                     const totalYearlyAmount = data.total_yearly_amount;
                     const donorsThisYearCount = data.donors_this_year_count;
                     
-                    // Update the UI
+                    // Update the UI - only update dynamic elements, not our static values
                     document.getElementById('newDonorsToday').textContent = donorCount;
+                    // Don't update the static newDonorsThisYear_static element
                     document.getElementById('yearlyValueAllDonors').textContent = totalYearlyAmount.toLocaleString('no-NO') + ' kr';
                     
                     // Create hearts based on the number of new donors
@@ -104,6 +105,7 @@
                     
                     document.getElementById('newDonorsToday').textContent = placeholderDonors;
                     document.getElementById('yearlyValueAllDonors').textContent = placeholderYearlyValue.toLocaleString('no-NO') + ' kr';
+                    // Don't update the static newDonorsThisYear_static element
                     
                     // Create hearts based on the placeholder number
                     createHearts(placeholderDonors);

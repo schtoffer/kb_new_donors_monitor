@@ -1,3 +1,4 @@
 [config]
 SCM_DO_BUILD_DURING_DEPLOYMENT=true
 PYTHON_REQUIREMENTS_TXT=requirements-azure.txt
+STARTUP_COMMAND=gunicorn --bind=0.0.0.0:8000 --timeout 600 wsgi:application

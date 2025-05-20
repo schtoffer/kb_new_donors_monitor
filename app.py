@@ -16,31 +16,66 @@ import sqlite3
 import json
 
 # Configure logging
-logging.basicConfig(level=logging.INFO)
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
+
+# Create a logger for this module
+logger = logging.getLogger(__name__)
+logger.info('Starting application initialization')
+
+# Log system information
+logger.info(f'Python version: {sys.version}')
+logger.info(f'Platform: {sys.platform}')
+logger.info(f'Current working directory: {os.getcwd()}')
+logger.info(f'Environment variables: {[k for k in os.environ.keys()]}')
 
 app = Flask(__name__, instance_relative_config=True, static_folder='static', static_url_path='/static')
 
 # Make sure the instance folder exists
 try:
     os.makedirs(app.instance_path, exist_ok=True)
-    app.logger.info(f'Instance path created: {app.instance_path}')
+    logger.info(f'Instance path created: {app.instance_path}')
+    # Check if the instance directory is writable
+    test_file_path = os.path.join(app.instance_path, 'test_write.txt')
+    try:
+        with open(test_file_path, 'w') as f:
+            f.write('test')
+        os.remove(test_file_path)
+        logger.info('Instance directory is writable')
+    except Exception as e:
+        logger.error(f'Instance directory is not writable: {e}')
 except Exception as e:
-    app.logger.error(f'Error creating instance path: {e}')
+    logger.error(f'Error creating instance path: {e}')
 
 # Database configuration
+logger.info('Configuring database connection')
 # Check for environment variables first (for Azure deployment)
 db_uri = os.environ.get('DATABASE_URL')
-
 if not db_uri:
-    # Use absolute path for SQLite database as fallback
     db_path = os.path.join(app.instance_path, 'donors.db')
     db_uri = f'sqlite:///{db_path}'
-    app.logger.info(f'Using SQLite database at: {db_path}')
+    logger.info(f'Using SQLite database at: {db_path}')
+    # Check if the database directory is writable
+    db_dir = os.path.dirname(db_path)
+    logger.info(f'Database directory: {db_dir}')
+    if os.path.exists(db_dir):
+        logger.info(f'Database directory exists: {db_dir}')
+        if os.access(db_dir, os.W_OK):
+            logger.info(f'Database directory is writable: {db_dir}')
+        else:
+            logger.error(f'Database directory is not writable: {db_dir}')
+    else:
+        logger.error(f'Database directory does not exist: {db_dir}')
 else:
-    app.logger.info(f'Using database from environment variable')
+    # Log the type of database being used (without exposing credentials)
+    db_type = db_uri.split('://')[0] if '://' in db_uri else 'unknown'
+    logger.info(f'Using database from environment variable: {db_type}')
 
 app.config['SQLALCHEMY_DATABASE_URI'] = db_uri
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+logger.info('Database configuration complete')
 app.config['TEMPLATES_AUTO_RELOAD'] = True
 
 # Log startup information

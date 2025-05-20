@@ -1163,7 +1163,14 @@ with app.app_context():
         os.makedirs(app.instance_path, exist_ok=True)
         # Create database tables
         db.create_all()
-        app.logger.info(f'Database tables created successfully at {db_path}')
+        # Log success message with the database URI (but mask any sensitive information)
+        db_info = app.config['SQLALCHEMY_DATABASE_URI']
+        if db_info.startswith('sqlite'):
+            app.logger.info(f'Database tables created successfully at {db_info}')
+        else:
+            # For other database types, don't log the full connection string as it might contain credentials
+            db_type = db_info.split('://')[0] if '://' in db_info else 'unknown'
+            app.logger.info(f'Database tables created successfully using {db_type} database')
     except Exception as e:
         app.logger.error(f'Error creating database tables: {e}')
 
